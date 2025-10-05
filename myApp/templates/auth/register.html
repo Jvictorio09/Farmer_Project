@@ -1,0 +1,33 @@
+{% extends 'auth/base.html' %}
+{% load static %}
+{% block title %}Register | AgriTrack{% endblock %}
+{% load form_tags %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-green-50 px-4 py-8">
+  <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg">
+    <div class="text-center mb-6">
+      <h2 class="text-3xl font-extrabold text-green-700">Create Your Farmer Account 🧑‍🌾</h2>
+      <p class="text-gray-600 text-sm mt-1">Join AgriTrack and grow with confidence.</p>
+    </div>
+    <form method="POST" class="space-y-5">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+          {{ field|add_class:"w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" }}
+          {% if field.errors %}
+            <p class="text-sm text-red-600 mt-1">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-md transition">Register</button>
+    </form>
+    <p class="text-center text-sm mt-6 text-gray-600">
+      Already have an account?
+      <a href="{% url 'login' %}" class="text-green-700 font-medium hover:underline">Log in here</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

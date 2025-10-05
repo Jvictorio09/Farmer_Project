@@ -1,0 +1,15 @@
+{% if reminders %}
+  <ul class="space-y-2 text-sm text-gray-700">
+    {% for reminder in reminders %}
+      <li class="flex justify-between items-center border-b pb-2">
+        <span>{{ reminder.message }} — <span class="text-gray-400">{{ reminder.due_date }}</span></span>
+        <div class="space-x-2 text-right">
+          <button onclick="openEditReminderModal({{ reminder.id }}, '{{ reminder.message }}', '{{ reminder.due_date }}')" class="text-blue-600 hover:underline">Edit</button>
+          <button onclick="openDeleteReminderModal({{ reminder.id }})" class="text-red-600 hover:underline">Delete</button>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="text-gray-500 text-sm">No reminders at the moment.</p>
+{% endif %}

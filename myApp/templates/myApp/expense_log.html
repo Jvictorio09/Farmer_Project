@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-10 px-6 space-y-8">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h2 class="text-3xl font-bold text-green-700">💰 Expense Tracker</h2>
+    {% if total %}
+      <div class="text-sm text-gray-500">Showing:
+        {% if selected_month %}<span class="font-medium">{{ selected_month }}</span>{% else %}All months{% endif %}
+        {% if selected_year %} <span class="ml-1">• <span class="font-medium">{{ selected_year }}</span></span>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Flash Messages -->
+  {% if messages %}
+    <div class="space-y-2">
+      {% for message in messages %}
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-md shadow-sm">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- KPI Tiles -->
+  <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="bg-white border rounded-lg p-4 shadow-sm">
+      <p class="text-xs text-gray-500">Total (filtered)</p>
+      <p class="text-2xl font-bold text-green-700">₱{{ total|default:"0" }}</p>
+    </div>
+    {# Most Spent On #}
+<div class="bg-white shadow-sm rounded-lg p-4 border">
+  <p class="text-sm text-gray-500">Most Spent On</p>
+  {% if most_spent_on %}
+    <p class="text-xl font-semibold text-gray-800">{{ most_spent_on }}</p>
+    <p class="text-xs text-gray-500">₱{{ most_spent_amount|floatformat:0 }}</p>
+  {% else %}
+    <p class="text-xl text-gray-400">—</p>
+  {% endif %}
+</div>
+
+{# Avg / Expense #}
+<div class="bg-white shadow-sm rounded-lg p-4 border">
+  <p class="text-sm text-gray-500">Avg / Expense</p>
+  <p class="text-xl font-semibold text-gray-800">₱{{ avg_expense|floatformat:0 }}</p>
+</div>
+  </section>
+
+  <!-- Add Expense Form -->
+  <section class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">➕ Add New Expense</h3>
+    <form method="post" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {% csrf_token %}
+      <input type="hidden" name="add_expense" value="1">
+      <div>{{ form.expense_type.label_tag }}{{ form.expense_type }}</div>
+      <div>{{ form.amount.label_tag }}{{ form.amount }}</div>
+      <div>{{ form.date.label_tag }}{{ form.date }}</div>
+      <div class="sm:col-span-2">{{ form.description.label_tag }}{{ form.description }}</div>
+      <div class="sm:col-span-2 text-right">
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md font-medium text-sm">
+          Save Expense
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Filters + Export -->
+  <section class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 bg-gray-50 p-4 border rounded-lg">
+    <!-- Filter Form -->
+    <form id="filterForm" method="get" class="flex flex-wrap gap-4 items-end">
+      <div>
+        <label for="month" class="text-sm font-medium text-gray-700">Month</label>
+        <select name="month" id="month" class="border px-3 py-2 rounded text-sm">
+          <option value="">All Months</option>
+          {% for value, name in months %}
+            <option value="{{ value }}" {% if value == selected_month %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="year" class="text-sm font-medium text-gray-700">Year</label>
+        <select name="year" id="year" class="border px-3 py-2 rounded text-sm">
+          <option value="">All Years</option>
+          {% for y in years %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">
+        Filter
+      </button>
+    </form>
+
+    <!-- Export Buttons (keep current querystring) -->
+    <div class="flex gap-3">
+      {% if expenses %}
+        {% with qstring="?" %}
+          <a id="exportCsv" href="{% url 'export_expenses_csv' %}" class="px-4 py-2 rounded text-sm font-medium border bg-white hover:bg-gray-50">
+            ⬇ CSV
+          </a>
+          <a id="exportPdf" href="{% url 'export_expenses_pdf' %}" class="px-4 py-2 rounded text-sm font-medium border bg-white hover:bg-gray-50">
+            ⬇ PDF
+          </a>
+        {% endwith %}
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Charts (compact) -->
+  <section class="grid md:grid-cols-3 gap-4">
+    <div class="bg-white shadow-sm rounded-lg p-5 border">
+      <p class="text-sm font-semibold text-green-700 mb-2">📈 Monthly Total</p>
+      <div class="h-36"><canvas id="chartMonthly"></canvas></div>
+    </div>
+    <div class="bg-white shadow-sm rounded-lg p-5 border">
+      <p class="text-sm font-semibold text-green-700 mb-2">🥧 By Category</p>
+      <div class="h-36"><canvas id="chartCategory"></canvas></div>
+    </div>
+    <div class="bg-white shadow-sm rounded-lg p-5 border">
+      <p class="text-sm font-semibold text-green-700 mb-2">🏷️ Top Categories</p>
+      <div class="h-36"><canvas id="chartTopBars"></canvas></div>
+    </div>
+  </section>
+
+  <!-- Expense Table -->
+  <section class="bg-white shadow-sm rounded-lg p-4 border">
+    <div class="flex items-center justify-between">
+      <h3 class="text-lg font-semibold text-gray-800 mb-2">📄 Expense Records</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-separate border-spacing-y-2">
+        <thead class="text-gray-700 bg-gray-100 rounded">
+          <tr>
+            <th class="px-4 py-2 text-left">📅 Date</th>
+            <th class="px-4 py-2 text-left">📂 Type</th>
+            <th class="px-4 py-2 text-left">📝 Description</th>
+            <th class="px-4 py-2 text-right">💸 Amount</th>
+            <th class="px-4 py-2 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for expense in expenses %}
+            <tr class="bg-gray-50 hover:bg-gray-100 transition">
+              <td class="px-4 py-2">{{ expense.date }}</td>
+              <td class="px-4 py-2 capitalize">{{ expense.get_expense_type_display }}</td>
+              <td class="px-4 py-2 text-gray-600">{{ expense.description|default:"—" }}</td>
+              <td class="px-4 py-2 text-right font-medium">₱{{ expense.amount }}</td>
+              <td class="px-4 py-2 text-right">
+                <button type="button"
+                        class="text-blue-600 hover:underline text-sm"
+                        onclick="openEditModal('{{ expense.id }}', '{{ expense.expense_type }}', '{{ expense.amount }}', '{{ expense.date }}', '{{ expense.description|escapejs }}')">
+                  Edit
+                </button>
+                <form method="post" class="inline-block ml-2" onsubmit="return confirm('Delete this expense?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="delete_expense" value="1">
+                  <input type="hidden" name="expense_id" value="{{ expense.id }}">
+                  <button type="submit" class="text-red-600 hover:underline text-sm">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-gray-400 py-6">No expenses found for this period.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 text-right text-lg font-bold text-gray-800">
+      Total: ₱{{ total }}
+    </div>
+  </section>
+
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
+  <form method="post" class="bg-white p-6 rounded shadow-md w-full max-w-md">
+    {% csrf_token %}
+    <input type="hidden" name="edit_expense" value="1">
+    <input type="hidden" name="expense_id" id="edit-expense-id">
+    <h3 class="text-lg font-semibold mb-4">Edit Expense</h3>
+
+    <label class="block mb-2 text-sm font-medium">Type</label>
+    <select name="expense_type" id="edit-expense-type" class="w-full border p-2 rounded mb-4">
+      {% for key, value in form.fields.expense_type.choices %}
+        <option value="{{ key }}">{{ value }}</option>
+      {% endfor %}
+    </select>
+
+    <label class="block mb-2 text-sm font-medium">Amount</label>
+    <input type="number" name="amount" id="edit-amount" class="w-full border p-2 rounded mb-4" required>
+
+    <label class="block mb-2 text-sm font-medium">Date</label>
+    <input type="date" name="date" id="edit-date" class="w-full border p-2 rounded mb-4" required>
+
+    <label class="block mb-2 text-sm font-medium">Description</label>
+    <textarea name="description" id="edit-description" class="w-full border p-2 rounded mb-4"></textarea>
+
+    <div class="flex justify-end gap-4">
+      <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded border">Cancel</button>
+      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Update</button>
+    </div>
+  </form>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script>
+  // --------- Edit modal ----------
+  function openEditModal(id, type, amount, date, description) {
+    document.getElementById('edit-expense-id').value = id;
+    document.getElementById('edit-expense-type').value = type;
+    document.getElementById('edit-amount').value = amount;
+    document.getElementById('edit-date').value = date;
+    document.getElementById('edit-description').value = description || '';
+    const m = document.getElementById('editModal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+  }
+  function closeEditModal() {
+    const m = document.getElementById('editModal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+  }
+
+  // --------- Carry filters into export links ----------
+  (function syncExportLinks(){
+    const params = new URLSearchParams(window.location.search);
+    const csv = document.getElementById('exportCsv');
+    const pdf = document.getElementById('exportPdf');
+    if(csv) { csv.href = csv.href + (params.toString() ? ('?' + params.toString()) : ''); }
+    if(pdf) { pdf.href = pdf.href + (params.toString() ? ('?' + params.toString()) : ''); }
+  })();
+
+  // --------- Charts (small, calm) ----------
+  const green = { 100:'rgba(16,185,129,.15)', 300:'rgba(16,185,129,.35)', 500:'rgba(16,185,129,.65)', solid:'#10B981' };
+
+  function drawMonthly() {
+    // support either endpoint name
+    const url = "{% url 'expense_chart_data' %}";
+    fetch(url + window.location.search)
+      .then(r=>r.json())
+      .then(({labels, data})=>{
+        const el = document.getElementById('chartMonthly'); if(!el) return;
+        el.height = 140;
+        new Chart(el, {
+          type:'line',
+          data:{ labels, datasets:[{ data, label:'₱ per month', borderColor:green.solid, backgroundColor:green[100], fill:true, tension:.3, pointRadius:2 }]},
+          options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>'₱'+v.toLocaleString() } } } }
+        });
+      });
+  }
+  function drawCategory() {
+    fetch("{% url 'chart_expenses_by_category' %}" + window.location.search)
+      .then(r=>r.json())
+      .then(({labels, data})=>{
+        const el = document.getElementById('chartCategory'); if(!el) return;
+        el.height = 140;
+        new Chart(el,{
+          type:'doughnut',
+          data:{ labels, datasets:[{ data, backgroundColor:[green[100], green[300], green[500], green.solid, '#E5E7EB'] }]},
+          options:{ plugins:{legend:{display:false}}, cutout:'60%' }
+        });
+      });
+  }
+  function drawTopBars() {
+    // reuse the same endpoint; sort client-side and show top 5
+    fetch("{% url 'chart_expenses_by_category' %}" + window.location.search)
+      .then(r=>r.json())
+      .then(({labels, data})=>{
+        const pairs = labels.map((l,i)=>({l, v:data[i]||0})).sort((a,b)=>b.v-a.v).slice(0,5);
+        const el = document.getElementById('chartTopBars'); if(!el) return;
+        el.height = 140;
+        new Chart(el,{
+          type:'bar',
+          data:{ labels:pairs.map(p=>p.l), datasets:[{ data:pairs.map(p=>p.v), backgroundColor:green[300], borderColor:green.solid, borderWidth:1 }]},
+          options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>'₱'+v.toLocaleString() } } } }
+        });
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    drawMonthly(); drawCategory(); drawTopBars();
+  });
+</script>
+{% endblock %}

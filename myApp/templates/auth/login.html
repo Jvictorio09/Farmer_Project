@@ -1,0 +1,38 @@
+{% extends 'auth/base.html' %}
+{% load static %}
+{% block title %}Login | AgriTrack{% endblock %}
+{% load form_tags %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-green-50 px-4 py-8">
+  <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <div class="text-center mb-6">
+      <h2 class="text-3xl font-extrabold text-green-700">Welcome Back 🌾</h2>
+      <p class="text-sm text-gray-600 mt-1">Log in to access your dashboard</p>
+    </div>
+    <form method="POST" class="space-y-5">
+      {% csrf_token %}
+      {% if form.errors %}
+        <div class="bg-red-100 text-red-700 px-4 py-2 rounded-md text-sm">
+          Invalid username or password. Please try again.
+        </div>
+      {% endif %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+        <input type="text" name="username" autocomplete="username"
+               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" required>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+        <input type="password" name="password" autocomplete="current-password"
+               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" required>
+      </div>
+      <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-md transition">Login</button>
+    </form>
+    <p class="text-center text-sm mt-6 text-gray-600">
+      New to AgriTrack?
+      <a href="{% url 'register' %}" class="text-green-700 font-medium hover:underline">Create an account</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

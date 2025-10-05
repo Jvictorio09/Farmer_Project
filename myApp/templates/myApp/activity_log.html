@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4">
+
+  <!-- Header -->
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold text-green-700 mb-1">📋 Activity Log</h1>
+    <p class="text-sm text-gray-500">Log farm work quickly. Manage crops only when needed.</p>
+  </header>
+
+  {% if messages %}
+    <div class="mb-4 space-y-2">
+      {% for message in messages %}
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Tabs -->
+  <div class="mb-4 border-b border-gray-200">
+    <nav class="flex gap-4">
+      <button id="tab-log" class="py-2 px-3 text-sm font-medium border-b-2 border-green-600 text-green-700">
+        Log Activity
+      </button>
+      <button id="tab-crops" class="py-2 px-3 text-sm text-gray-600 hover:text-green-700">
+        Manage Crops
+      </button>
+    </nav>
+  </div>
+
+  <!-- ========== TAB 1: LOG ACTIVITY (Primary) ========== -->
+  <section id="panel-log" class="space-y-6">
+    <!-- Quick Log card -->
+    <form method="post" class="bg-white shadow-sm rounded-lg p-5">
+      {% csrf_token %}
+      <input type="hidden" name="add_activity" value="1">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">⚡ Quick Log</h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Crop + Quick Add -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Crop</label>
+          <div class="flex gap-2">
+            <div class="flex-1">
+              {{ form.crop }}
+            </div>
+            <button
+              type="button"
+              class="text-sm px-3 py-2 rounded border border-gray-200 hover:bg-gray-50"
+              onclick="openQuickCrop()">
+              + New
+            </button>
+          </div>
+          <p class="text-[11px] text-gray-500 mt-1">Can’t find it? Add the crop, then we’ll auto-select it here.</p>
+        </div>
+
+        <!-- Activity type -->
+        <div>
+          {{ form.activity_type.label_tag }}{{ form.activity_type }}
+        </div>
+
+        <!-- Date -->
+        <div>
+          {{ form.date.label_tag }}{{ form.date }}
+        </div>
+
+        <!-- Notes -->
+        <div class="sm:col-span-2">
+          {{ form.notes.label_tag }}{{ form.notes }}
+        </div>
+      </div>
+
+      <!-- Planting extras (progressive disclosure) -->
+      <div id="plantingExtras" class="mt-5 hidden border rounded-lg p-4 bg-green-50">
+        <h3 class="font-semibold text-green-700 mb-2">🌾 Planting Details (for forecast)</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm mb-1" for="area_ha">Area (hectares)</label>
+            <input type="number" step="0.01" min="0" name="area_ha" id="area_ha"
+                   class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., 1.00">
+          </div>
+          <div>
+            <label class="block text-sm mb-1" for="seed_qty_kg">Seed Quantity (kg)</label>
+            <input type="number" step="0.01" min="0" name="seed_qty_kg" id="seed_qty_kg"
+                   class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., 40">
+          </div>
+          <div>
+            <label class="block text-sm mb-1" for="fert_sacks">Fertilizer (50kg sacks)</label>
+            <input type="number" step="0.01" min="0" name="fert_sacks" id="fert_sacks"
+                   class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., 5">
+          </div>
+          <div>
+            <label class="block text-sm mb-1" for="spacing">Spacing</label>
+            <input type="text" name="spacing" id="spacing"
+                   class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., 20x20 cm or 10x10 m">
+          </div>
+        </div>
+        <p class="text-[11px] text-gray-600 mt-2">
+          We’ll compute min/est/max yield and harvest window after you save.
+        </p>
+      </div>
+
+      <div class="mt-5 flex items-center gap-2">
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded text-sm font-medium">
+          ✅ Save Activity
+        </button>
+        <!-- Exports live here because folks ask right after logging -->
+        <a href="{% url 'export_activities_csv' %}" class="text-sm px-3 py-2 rounded border hover:bg-gray-50">⬇ CSV</a>
+        <a href="{% url 'export_activities_pdf' %}" class="text-sm px-3 py-2 rounded border hover:bg-gray-50">⬇ PDF</a>
+      </div>
+    </form>
+
+    <!-- Selected Crop glance -->
+    <div id="selectedCropInfo" class="bg-white shadow-sm rounded-lg p-4 hidden">
+      <div class="flex items-start justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-green-700">Selected Crop</h3>
+          <p class="text-base font-medium text-gray-800" id="glanceName">—</p>
+          <p class="text-xs text-gray-500">Seasons: <span id="glanceSeason">—</span></p>
+        </div>
+      </div>
+      <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+        <div class="border rounded p-2"><p class="text-xs text-gray-500">Seed kg/ha</p><p class="font-medium"><span id="gSeedMin">—</span>–<span id="gSeedMax">—</span></p></div>
+        <div class="border rounded p-2"><p class="text-xs text-gray-500">Fert sacks/ha</p><p class="font-medium"><span id="gFertMin">—</span>–<span id="gFertMax">—</span></p></div>
+        <div class="border rounded p-2"><p class="text-xs text-gray-500">Yield t/ha</p><p class="font-medium"><span id="gYMin">—</span>–<span id="gYMax">—</span></p></div>
+        <div class="border rounded p-2"><p class="text-xs text-gray-500">Maturity days</p><p class="font-medium"><span id="gDMin">—</span>–<span id="gDMax">—</span></p></div>
+      </div>
+    </div>
+
+    <!-- Tiny Insights row (compact charts) -->
+    <div class="grid sm:grid-cols-3 gap-4">
+      <div class="bg-white shadow-sm rounded-lg p-4">
+        <p class="text-sm font-semibold text-green-700 mb-2">📈 Activities per Month</p>
+        <div class="h-36"><canvas id="chartMonthly"></canvas></div>
+      </div>
+      <div class="bg-white shadow-sm rounded-lg p-4">
+        <p class="text-sm font-semibold text-green-700 mb-2">🔧 Activity Types</p>
+        <div class="h-36"><canvas id="chartTypes"></canvas></div>
+      </div>
+      <div class="bg-white shadow-sm rounded-lg p-4">
+        <p class="text-sm font-semibold text-green-700 mb-2">🌿 By Crop</p>
+        <div class="h-36"><canvas id="chartCrops"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div>
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">🕒 Recent Activities</h2>
+      <div class="overflow-x-auto bg-white shadow-sm rounded-lg">
+        <table class="min-w-full text-sm table-auto border-collapse">
+          <thead class="bg-gray-50 text-left">
+            <tr>
+              <th class="px-4 py-3 border-b">📅 Date</th>
+              <th class="px-4 py-3 border-b">🌿 Crop</th>
+              <th class="px-4 py-3 border-b">🔧 Type</th>
+              <th class="px-4 py-3 border-b">📝 Notes</th>
+              <th class="px-4 py-3 border-b">📐 Area</th>
+              <th class="px-4 py-3 border-b">🌾 Seed</th>
+              <th class="px-4 py-3 border-b">🧪 Fert</th>
+              <th class="px-4 py-3 border-b">🔢 Spacing</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for activity in activities %}
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-2 border-b">{{ activity.date }}</td>
+                <td class="px-4 py-2 border-b">{{ activity.crop.name }}</td>
+                <td class="px-4 py-2 border-b capitalize">{{ activity.activity_type }}</td>
+                <td class="px-4 py-2 border-b text-gray-600">{{ activity.notes|default:"—" }}</td>
+                {% if activity.activity_type == 'planting' %}
+                  <td class="px-4 py-2 border-b">{{ activity.area_ha|default:"—" }}</td>
+                  <td class="px-4 py-2 border-b">{{ activity.seed_qty_kg|default:"—" }}</td>
+                  <td class="px-4 py-2 border-b">{{ activity.fert_sacks|default:"—" }}</td>
+                  <td class="px-4 py-2 border-b">{{ activity.spacing|default:"—" }}</td>
+                {% else %}
+                  <td class="px-4 py-2 border-b text-gray-400">—</td>
+                  <td class="px-4 py-2 border-b text-gray-400">—</td>
+                  <td class="px-4 py-2 border-b text-gray-400">—</td>
+                  <td class="px-4 py-2 border-b text-gray-400">—</td>
+                {% endif %}
+              </tr>
+            {% empty %}
+              <tr><td colspan="8" class="text-center text-gray-400 py-6">No activity yet. Log one above.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== TAB 2: MANAGE CROPS (Secondary) ========== -->
+  <section id="panel-crops" class="hidden space-y-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-800">🌱 Manage Crops</h2>
+      <button type="button" class="text-sm px-3 py-2 rounded border border-gray-200 hover:bg-gray-50" onclick="openQuickCrop()">
+        + Add Crop
+      </button>
+    </div>
+
+    <div class="bg-white shadow-sm rounded-lg p-5">
+      <div class="flex items-center gap-3">
+        <label class="text-sm text-gray-700">Select Crop</label>
+        <select id="cropListSelect" class="border rounded px-3 py-2 text-sm w-full sm:w-auto">
+          {% for crop in crops %}
+            <option
+              value="{{ crop.id }}"
+              data-name="{{ crop.name }}"
+              data-seasons="{{ crop.ideal_seasons|default:'' }}"
+              data-description="{{ crop.description|escapejs|default:'' }}"
+              data-seedmin="{{ crop.seed_rate_min_kg|default_if_none:'' }}"
+              data-seedmax="{{ crop.seed_rate_max_kg|default_if_none:'' }}"
+              data-fertmin="{{ crop.fert_sacks_min|default_if_none:'' }}"
+              data-fertmax="{{ crop.fert_sacks_max|default_if_none:'' }}"
+              data-ymin="{{ crop.yield_t_min|default_if_none:'' }}"
+              data-ymax="{{ crop.yield_t_max|default_if_none:'' }}"
+              data-dmin="{{ crop.days_to_harvest_min|default_if_none:'' }}"
+              data-dmax="{{ crop.days_to_harvest_max|default_if_none:'' }}"
+            >
+              {{ crop.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="selectedCropPanel" class="mt-4 hidden">
+        <div class="border rounded-lg p-4 bg-gray-50">
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="text-base font-semibold text-gray-800" id="cropName">—</h4>
+              <p class="text-xs text-gray-600 mt-0.5">Seasons: <span id="cropSeasons">—</span></p>
+            </div>
+            <div class="flex gap-2 text-sm">
+              <button id="editCropBtn" class="text-blue-600 hover:underline" type="button">✏️ Edit</button>
+              <button id="deleteCropBtn" class="text-red-600 hover:underline" type="button">🗑️ Delete</button>
+            </div>
+          </div>
+
+          <p class="text-sm text-gray-700 mt-3" id="cropDesc">—</p>
+
+          <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div class="bg-white border rounded p-3"><p class="text-gray-500 text-xs">Seed rate (kg/ha)</p><p class="font-medium"><span id="seedMin">—</span>–<span id="seedMax">—</span></p></div>
+            <div class="bg-white border rounded p-3"><p class="text-gray-500 text-xs">Fertilizer (sacks/ha)</p><p class="font-medium"><span id="fertMin">—</span>–<span id="fertMax">—</span></p></div>
+            <div class="bg-white border rounded p-3"><p class="text-gray-500 text-xs">Yield (t/ha)</p><p class="font-medium"><span id="yMin">—</span>–<span id="yMax">—</span></p></div>
+            <div class="bg-white border rounded p-3"><p class="text-gray-500 text-xs">Maturity (days)</p><p class="font-medium"><span id="dMin">—</span>–<span id="dMax">—</span></p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- QUICK ADD CROP MODAL -->
+<div id="quickCropModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white p-6 rounded-lg w-full max-w-lg relative shadow-xl">
+    <button class="absolute top-2 right-3 text-gray-400 hover:text-black text-2xl font-bold"
+            onclick="closeQuickCrop()">&times;</button>
+
+    <h3 class="text-lg font-bold text-green-700 mb-1">🌱 Add Crop (Quick)</h3>
+    <p class="text-sm text-gray-500 mb-4">Just the basics. You can fill advanced details later.</p>
+
+    <form method="post" id="quickCropForm" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="add_crop" value="1">
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Crop Name *</label>
+        {{ crop_form.name }}
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Ideal Planting Seasons</label>
+        {{ crop_form.ideal_seasons }}
+        <p class="text-xs text-gray-400 mt-1">Example: <code>Jan-Mar, Jul-Sep</code></p>
+      </div>
+
+      <details class="border rounded-lg p-3 bg-gray-50">
+        <summary class="cursor-pointer text-sm font-semibold text-gray-700">
+          More details (optional)
+        </summary>
+        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {{ crop_form.description }}
+          {{ crop_form.seed_rate_min_kg }}
+          {{ crop_form.seed_rate_max_kg }}
+          {{ crop_form.fert_sacks_min }}
+          {{ crop_form.fert_sacks_max }}
+          {{ crop_form.yield_t_min }}
+          {{ crop_form.yield_t_max }}
+          {{ crop_form.days_to_harvest_min }}
+          {{ crop_form.days_to_harvest_max }}
+        </div>
+      </details>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" class="px-4 py-2 rounded text-sm border" onclick="closeQuickCrop()">Cancel</button>
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">
+          ✅ Save Crop
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Crop Modal / Delete Crop Modal are unchanged from your version -->
+
+<!-- Chart.js (tiny footprint) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+
+<script>
+  // Tabs
+  const tabLog = document.getElementById('tab-log');
+  const tabCrops = document.getElementById('tab-crops');
+  const panelLog = document.getElementById('panel-log');
+  const panelCrops = document.getElementById('panel-crops');
+
+  tabLog.addEventListener('click', ()=> {
+    tabLog.classList.add('border-green-600','text-green-700');
+    tabCrops.classList.remove('border-b-2','border-green-600','text-green-700');
+    tabCrops.classList.add('text-gray-600');
+    panelLog.classList.remove('hidden');
+    panelCrops.classList.add('hidden');
+  });
+  tabCrops.addEventListener('click', ()=> {
+    tabCrops.classList.add('border-b-2','border-green-600','text-green-700');
+    tabLog.classList.remove('border-b-2','border-green-600','text-green-700');
+    tabLog.classList.add('text-gray-600');
+    panelCrops.classList.remove('hidden');
+    panelLog.classList.add('hidden');
+  });
+
+  // Show planting extras only for planting
+  function togglePlanting() {
+    const sel = document.getElementById("id_activity_type") || document.querySelector('select[name="activity_type"]');
+    const box = document.getElementById("plantingExtras");
+    if (!sel || !box) return;
+    const planting = (sel.value || "").toLowerCase() === "planting";
+    box.classList.toggle("hidden", !planting);
+  }
+  (function initPlanting(){
+    let sel = document.getElementById("id_activity_type") || document.querySelector('select[name="activity_type"]');
+    if (sel) { sel.addEventListener("change", togglePlanting); togglePlanting(); }
+  })();
+
+  // Quick Add Crop modal
+  function openQuickCrop(){ document.getElementById('quickCropModal').classList.remove('hidden'); }
+  function closeQuickCrop(){ document.getElementById('quickCropModal').classList.add('hidden'); }
+
+  // Selected Crop glance (sync with Manage Crops options)
+  (function initSelectedGlance(){
+    const select = document.getElementById('id_crop') || document.querySelector('select[name="crop"]');
+    const info = document.getElementById('selectedCropInfo');
+    if(!select || !info) return;
+    select.addEventListener('change', async () => {
+      const id = select.value;
+      if(!id){ info.classList.add('hidden'); return; }
+      const mirror = document.querySelector(`#cropListSelect option[value="${id}"]`);
+      if(!mirror){ info.classList.add('hidden'); return; }
+      document.getElementById('glanceName').innerText = mirror.dataset.name || '—';
+      document.getElementById('glanceSeason').innerText = mirror.dataset.seasons || '—';
+      document.getElementById('gSeedMin').innerText = mirror.dataset.seedmin || '—';
+      document.getElementById('gSeedMax').innerText = mirror.dataset.seedmax || '—';
+      document.getElementById('gFertMin').innerText = mirror.dataset.fertmin || '—';
+      document.getElementById('gFertMax').innerText = mirror.dataset.fertmax || '—';
+      document.getElementById('gYMin').innerText = mirror.dataset.ymin || '—';
+      document.getElementById('gYMax').innerText = mirror.dataset.ymax || '—';
+      document.getElementById('gDMin').innerText = mirror.dataset.dmin || '—';
+      document.getElementById('gDMax').innerText = mirror.dataset.dmax || '—';
+      info.classList.remove('hidden');
+    });
+    if(select && select.value) { select.dispatchEvent(new Event('change')); }
+  })();
+
+  // Manage Crops panel bindings
+  function renderSelectedCropFromDropdown() {
+    const sel = document.getElementById('cropListSelect');
+    const panel = document.getElementById('selectedCropPanel');
+    if (!sel || !panel) return;
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt) { panel.classList.add('hidden'); return; }
+
+    const id   = opt.value;
+    const name = opt.dataset.name || '—';
+    const seasons = opt.dataset.seasons || '—';
+    const desc = opt.dataset.description || '—';
+    const seedMin = opt.dataset.seedmin || '—';
+    const seedMax = opt.dataset.seedmax || '—';
+    const fertMin = opt.dataset.fertmin || '—';
+    const fertMax = opt.dataset.fertmax || '—';
+    const yMin = opt.dataset.ymin || '—';
+    const yMax = opt.dataset.ymax || '—';
+    const dMin = opt.dataset.dmin || '—';
+    const dMax = opt.dataset.dmax || '—';
+
+    document.getElementById('cropName').innerText = name;
+    document.getElementById('cropSeasons').innerText = seasons;
+    document.getElementById('cropDesc').innerText = desc;
+    document.getElementById('seedMin').innerText = seedMin;
+    document.getElementById('seedMax').innerText = seedMax;
+    document.getElementById('fertMin').innerText = fertMin;
+    document.getElementById('fertMax').innerText = fertMax;
+    document.getElementById('yMin').innerText = yMin;
+    document.getElementById('yMax').innerText = yMax;
+    document.getElementById('dMin').innerText = dMin;
+    document.getElementById('dMax').innerText = dMax;
+
+    document.getElementById('editCropBtn').onclick = () => openEditModal(id, name, desc.replace(/`/g, '\\`'), seasons);
+    document.getElementById('deleteCropBtn').onclick = () => openDeleteModal(id, name);
+
+    panel.classList.remove('hidden');
+  }
+  (function initCropDropdown(){
+    const sel = document.getElementById('cropListSelect');
+    if (!sel) return;
+    sel.addEventListener('change', renderSelectedCropFromDropdown);
+    if (sel.options.length > 0) { sel.selectedIndex = 0; renderSelectedCropFromDropdown(); }
+  })();
+
+  // ===== Charts (compact, gentle colors) =====
+  const green = { 100:'rgba(16,185,129,.15)', 300:'rgba(16,185,129,.35)', 500:'rgba(16,185,129,.65)', solid:'#10B981' };
+
+  function drawCharts(){
+    // Monthly line (count of activities each month)
+    fetch("{% url 'chart_activities_monthly' %}")
+      .then(r=>r.json())
+      .then(({labels,data})=>{
+        const el = document.getElementById('chartMonthly'); if(!el) return;
+        el.height = 120;
+        new Chart(el,{type:'line',data:{labels,datasets:[{data, label:'count', borderColor:green.solid, backgroundColor:green[100], fill:true, tension:.3, pointRadius:2}]},
+          options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}}}});
+      });
+
+    // Types donut
+    fetch("{% url 'chart_activities_by_type' %}")
+      .then(r=>r.json())
+      .then(({labels,data})=>{
+        const el = document.getElementById('chartTypes'); if(!el) return;
+        el.height=120;
+        new Chart(el,{type:'doughnut',data:{labels,datasets:[{data, backgroundColor:[green[100],green[300],green[500]]}]},
+          options:{plugins:{legend:{display:false}}, cutout:'60%'}});
+      });
+
+    // Crops bar
+    fetch("{% url 'chart_activities_by_crop' %}")
+      .then(r=>r.json())
+      .then(({labels,data})=>{
+        const el = document.getElementById('chartCrops'); if(!el) return;
+        el.height = 120;
+        new Chart(el,{type:'bar',data:{labels,datasets:[{data, backgroundColor:green[300], borderColor:green.solid, borderWidth:1}]},
+          options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}}}});
+      });
+  }
+  document.addEventListener('DOMContentLoaded', drawCharts);
+</script>
+{% endblock %}
