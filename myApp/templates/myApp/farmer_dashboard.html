@@ -2,197 +2,239 @@
 {% block title %}Dashboard | AgriTrack{% endblock %}
 
 {% block content %}
-<div class="bg-green-50 min-h-screen p-6">
-  <div class="max-w-6xl mx-auto space-y-6">
+<div class="bg-green-50 min-h-screen py-4 sm:py-6">
+  <div class="mx-auto w-full max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-0">
 
     <!-- 👋 Welcome -->
-    <div class="bg-white p-6 rounded-xl shadow flex items-center justify-between">
-      <h2 class="text-2xl font-bold text-green-800">Hi! {{ user.first_name|default:user.username }} 👋</h2>
-      <span class="text-sm text-gray-500">Today is {% now "l, F j, Y" %}</span>
-    </div>
+    <section class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h2 class="text-2xl font-bold text-green-800">Hi! {{ user.first_name|default:user.username }} 👋</h2>
+        <p class="text-sm text-gray-500 mt-1">Let’s keep the farm on track today.</p>
+      </div>
+      <span class="text-sm font-medium text-gray-500">{% now "l, F j, Y" %}</span>
+    </section>
 
-    <!-- 🌱 Crop Summary + Forecast + Expenses -->
-    <div class="grid md:grid-cols-3 gap-4">
-      <!-- Crop Summary -->
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h3 class="text-lg font-semibold text-green-700 mb-2">🌱 Crops Planted</h3>
-        <p class="text-3xl font-bold text-green-800">{{ crop_count }}</p>
-        <p class="text-sm text-gray-500 mt-1">This month</p>
+    <!-- 🔔 Reminders -->
+    <section class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6">
+      <div class="flex items-center justify-between gap-3">
+        <h3 class="text-lg font-semibold text-green-700">🔔 Reminders</h3>
+        <button onclick="openAddReminderModal()" class="hidden sm:inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700">
+          + Add Reminder
+        </button>
+      </div>
+      <p class="mt-1 text-xs text-gray-500 sm:hidden">Tap a reminder to edit. Use the menu ⋮ for more actions.</p>
+      <div class="mt-4 rounded-lg border border-gray-100">
+        <div id="reminderList"
+             class="divide-y divide-gray-100 text-sm"
+             hx-get="{% url 'refresh_reminders' %}"
+             hx-trigger="load, reminder-updated from:body"
+             hx-target="#reminderList"
+             hx-swap="innerHTML">
+          <p class="p-4 text-gray-400">Loading reminders...</p>
+        </div>
+      </div>
+      <div class="mt-4 sm:hidden">
+        <button onclick="openAddReminderModal()" class="w-full rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
+          + Add Reminder
+        </button>
+      </div>
+    </section>
+
+    <!-- 🌾 Upcoming Harvests -->
+    <section class="space-y-4" id="upcoming-harvests">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="bg-white rounded-xl shadow px-4 py-4 sm:px-6 sm:py-5">
+          <h3 class="text-lg font-semibold text-green-700 mb-2">📈 Next Harvest Forecast</h3>
+          {% if forecasts %}
+            {% with next=forecasts.0 %}
+              <p class="text-2xl font-bold text-green-800">~{{ next.expected_yield_kg|floatformat:0 }} kg</p>
+              <p class="text-sm text-gray-500">
+                Window:
+                {% if next.harvest_start %}{{ next.harvest_start|date:"M j" }}{% else %}?{% endif %} –
+                {% if next.harvest_end %}{{ next.harvest_end|date:"M j" }}{% else %}?{% endif %}
+              </p>
+              <p class="mt-2 text-xs text-gray-400">
+                Season {{ next.season_factor|floatformat:2 }} • Inputs {{ next.input_factor|floatformat:2 }} • Pop {{ next.population_factor|floatformat:2 }}
+              </p>
+            {% endwith %}
+          {% else %}
+            <p class="text-sm text-gray-500">No forecast data available yet. Log a planting activity to generate one.</p>
+          {% endif %}
+        </div>
+        <div class="bg-white rounded-xl shadow px-4 py-4 sm:px-6 sm:py-5">
+          <h3 class="text-lg font-semibold text-green-700 mb-2">🌱 Crops Planted This Month</h3>
+          <p class="text-3xl font-bold text-green-800">{{ crop_count }}</p>
+          <p class="text-sm text-gray-500 mt-1">Keep logging activities to stay accurate.</p>
+        </div>
       </div>
 
-      <!-- Next Harvest (simple) -->
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h3 class="text-lg font-semibold text-green-700 mb-2">📈 Next Harvest Forecast</h3>
+      <div class="bg-white rounded-xl shadow px-4 py-4 sm:px-6 sm:py-5">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="text-lg font-semibold text-green-700">🌾 Coming Harvests</h3>
+          <div class="hidden text-xs sm:flex items-center gap-2 text-gray-400">
+            <span>Swipe on mobile or scroll to review each crop.</span>
+            <a href="#upcoming-harvests" class="text-green-600 hover:underline">View all</a>
+          </div>
+        </div>
+        <div class="mt-3 overflow-hidden">
+          <div id="harvestRail" class="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto md:overflow-visible scroll-smooth pb-2 snap-x snap-mandatory">
+            <p class="text-sm text-gray-400">Loading harvest timeline…</p>
+          </div>
+          <div class="mt-2 flex justify-center gap-1 text-xs text-gray-400 sm:hidden" id="harvestPagination"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h3 class="text-lg font-semibold text-green-700">🧮 Forecast Snapshots</h3>
+          <a href="{% url 'activity_log' %}#forecast" class="text-xs font-medium text-green-600 hover:underline">View planting details</a>
+        </div>
         {% if forecasts %}
-          {% with next=forecasts.0 %}
-            <p class="text-2xl font-bold text-green-800">
-              ~{{ next.expected_yield_kg|floatformat:0 }} kg
-            </p>
-            <p class="text-sm text-gray-500">
-              Window:
-              {% if next.harvest_start %}{{ next.harvest_start|date:"M j" }}{% else %}?{% endif %} –
-              {% if next.harvest_end %}{{ next.harvest_end|date:"M j" }}{% else %}?{% endif %}
-            </p>
-            <p class="text-xs text-gray-400 mt-1">
-              Season {{ next.season_factor|floatformat:2 }} • Inputs {{ next.input_factor|floatformat:2 }} • Pop {{ next.population_factor|floatformat:2 }}
-            </p>
-          {% endwith %}
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {% for f in forecasts|slice:":3" %}
+              <article class="rounded-lg border border-gray-100 p-4">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <p class="text-sm font-medium text-gray-700">{{ f.crop.name }}</p>
+                    <p class="text-xs text-gray-400">Updated {{ f.created_at|date:"M j" }}</p>
+                  </div>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full 
+                    {% if f.season_factor >= 1 %}bg-green-100 text-green-700
+                    {% elif f.season_factor >= 0.9 %}bg-yellow-100 text-yellow-700
+                    {% else %}bg-red-100 text-red-700{% endif %}">
+                    {% if f.season_factor >= 1 %}In-season{% elif f.season_factor >= 0.9 %}Shoulder{% else %}Off-season{% endif %}
+                  </span>
+                </div>
+                <p class="mt-3 text-xl font-bold text-green-800">{{ f.expected_yield_kg|floatformat:0 }} kg</p>
+                <p class="text-xs text-gray-500">Range: {{ f.yield_min_kg|floatformat:0 }}–{{ f.yield_max_kg|floatformat:0 }} kg</p>
+                <p class="mt-1 text-xs text-gray-500">
+                  Harvest:
+                  {% if f.harvest_start %}{{ f.harvest_start|date:"M j" }}{% else %}?{% endif %} –
+                  {% if f.harvest_end %}{{ f.harvest_end|date:"M j" }}{% else %}?{% endif %}
+                </p>
+                <details class="mt-2 text-xs text-gray-600">
+                  <summary class="cursor-pointer select-none text-gray-500">Why this estimate?</summary>
+                  <p class="mt-1 leading-relaxed text-gray-500">{{ f.notes }}</p>
+                </details>
+            {% if f.planting_activity_id %}
+              <div class="mt-3 text-right">
+                <a href="{% url 'planting_detail' f.planting_activity_id %}" class="text-xs font-medium text-green-600 hover:underline">View planting detail →</a>
+              </div>
+            {% endif %}
+              </article>
+            {% endfor %}
+          </div>
         {% else %}
-          <p class="text-sm text-gray-500">No forecast data available</p>
+          <p class="text-sm text-gray-500">No forecasts yet. Log a planting activity to auto-generate one.</p>
         {% endif %}
       </div>
+    </section>
 
-      <!-- Monthly Expenses -->
-      <div class="bg-white rounded-xl p-4 shadow">
-        <h3 class="text-lg font-semibold text-green-700 mb-2">💸 Expenses ({{ current_month }})</h3>
-        <p class="text-2xl font-bold text-green-800">₱{{ total_expenses }}</p>
-        <p class="text-sm text-gray-500">Across all categories</p>
-      </div>
-
-      <!-- 📌 Dashboard Summary -->
-      <div class="bg-white rounded-xl p-4 shadow md:col-span-3">
-        <h3 class="text-lg font-semibold text-green-700 mb-2">📌 Dashboard Summary</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-700">
-          <div>
-            <p class="text-gray-500">Total This Month</p>
-            <p class="text-xl font-bold text-green-800">₱{{ total_expenses }}</p>
+    <!-- ⚡ Quick Actions -->
+    <section class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6">
+      <h3 class="text-lg font-semibold text-green-700">⚡ Quick Actions</h3>
+      <p class="mt-1 text-xs text-gray-500">Focus on what matters. Primary action stays visible; other tools are tucked away on mobile.</p>
+      <div class="mt-4 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+        <a href="{% url 'activity_log' %}"
+           class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-green-700 sm:w-auto">
+          ✅ Log Activity
+        </a>
+        <details class="sm:hidden rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+          <summary class="flex cursor-pointer list-none items-center justify-between">
+            More tools
+            <span class="text-xs text-gray-400">⋮</span>
+          </summary>
+          <div class="mt-2 space-y-2">
+            <a href="{% url 'expense_log' %}" class="block rounded border border-gray-200 px-3 py-2 text-gray-700 hover:bg-white">💸 Add Expense</a>
+            <button type="button" onclick="openAddReminderModal()" class="block w-full rounded border border-gray-200 px-3 py-2 text-left text-gray-700 hover:bg-white">🔔 Add Reminder</button>
           </div>
-          <div>
-            <p class="text-gray-500">Most Common Expense</p>
-            <p class="text-lg text-green-700 font-medium">{{ most_common_expense_label }}</p>
-          </div>
-          <div>
-            <p class="text-gray-500">Last Recorded Expense</p>
-            {% if last_recorded_date %}
-              <p class="text-lg text-green-700">{{ last_recorded_date|date:"F j, Y" }}</p>
-            {% else %}
-              <p class="text-gray-400">—</p>
-            {% endif %}
-          </div>
+        </details>
+        <div class="hidden sm:flex gap-2">
+          <a href="{% url 'expense_log' %}" class="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">💸 Add Expense</a>
+          <button type="button" onclick="openAddReminderModal()" class="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">🔔 Add Reminder</button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- ================== INSIGHTS STRIP (compact) ================== -->
-    <style>
-      .insight-card { border:1px solid rgba(15,23,42,.06); box-shadow: 0 2px 8px rgba(2,6,23,.04); }
-      .mini { height: 110px !important; }
-      .mini * { font-size: 11px !important; }
-      .chip { display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .55rem; border-radius:999px; border:1px solid rgba(15,23,42,.08); background:#fff; white-space:nowrap; }
-      .rail { display:flex; gap:.5rem; overflow-x:auto; padding-bottom:.25rem; scrollbar-width:thin; }
-      .rail::-webkit-scrollbar { height: 6px; }
-      .rail::-webkit-scrollbar-thumb { background: rgba(2,6,23,.15); border-radius: 8px; }
-    </style>
-
-    <div class="bg-white rounded-xl p-4 md:p-3 insight-card">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-        <!-- A) Sparkline -->
-        <div class="space-y-1">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-green-700">💵 Money This Year</h3>
-            
-          </div>
-          <canvas id="miniLine" class="mini"></canvas>
+    <!-- 📊 Charts & Metrics -->
+    <section class="space-y-4" id="charts">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="bg-white rounded-xl shadow px-4 py-4">
+          <h3 class="text-sm font-semibold text-green-700">💸 Expenses ({{ current_month }})</h3>
+          <p class="mt-2 text-2xl font-bold text-green-800">₱{{ total_expenses }}</p>
+          <p class="text-xs text-gray-500 mt-1">Across all categories</p>
         </div>
-
-        <!-- B) Mini donut -->
-        <div class="space-y-1">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-green-700">🥧 Where the Money Went</h3>
-            <span class="text-[11px] text-gray-400">top categories</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <canvas id="miniDonut" class="mini" style="max-width:140px;"></canvas>
-            <ul id="miniDonutLegend" class="text-[12px] text-gray-700 grid grid-cols-1 gap-1"></ul>
-          </div>
+        <div class="bg-white rounded-xl shadow px-4 py-4">
+          <h3 class="text-sm font-semibold text-green-700">📌 This Month</h3>
+          <ul class="mt-2 space-y-1 text-xs text-gray-600">
+            <li class="flex justify-between"><span>Total Spend</span><span class="font-semibold text-gray-900">₱{{ total_expenses }}</span></li>
+            <li class="flex justify-between"><span>Most Common Expense</span><span class="font-semibold text-gray-900">{{ most_common_expense_label }}</span></li>
+            <li class="flex justify-between"><span>Last Recorded</span>
+              {% if last_recorded_date %}
+                <span class="font-semibold text-gray-900">{{ last_recorded_date|date:"M j" }}</span>
+              {% else %}
+                <span class="text-gray-400">—</span>
+              {% endif %}
+            </li>
+          </ul>
         </div>
-
-        <!-- C) Harvest ticker -->
-        <div class="space-y-1">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-green-700">🌾 Coming Harvests</h3>
-            <span class="text-[11px] text-gray-400">kg • window</span>
-          </div>
-          <div id="harvestRail" class="rail"></div>
-          <p class="text-[11px] text-gray-500 mt-1">Swipe → to see more crops</p>
+        <div class="bg-white rounded-xl shadow px-4 py-4">
+          <h3 class="text-sm font-semibold text-green-700">📌 Notes</h3>
+          <p class="mt-2 text-xs leading-relaxed text-gray-600">
+            Track expenses and activities regularly so forecasts stay accurate. Charts below show where the money went and how the season is trending.
+          </p>
         </div>
       </div>
-    </div>
 
-    <!-- 🧮 Per-crop Forecasts (list top 3) -->
-    <div class="bg-white rounded-xl p-4 shadow">
-      <h3 class="text-lg font-semibold text-green-700 mb-4">🧮 Forecasts</h3>
-      {% if forecasts %}
-        <div class="grid md:grid-cols-3 gap-4">
-          {% for f in forecasts|slice:":3" %}
-          <div class="border rounded-lg p-3">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-gray-700">{{ f.crop.name }}</span>
-              <span class="text-[11px] px-2 py-0.5 rounded-full 
-                {% if f.season_factor >= 1 %}bg-green-100 text-green-700
-                {% elif f.season_factor >= 0.9 %}bg-yellow-100 text-yellow-700
-                {% else %}bg-red-100 text-red-700{% endif %}">
-                {% if f.season_factor >= 1 %}In-season{% elif f.season_factor >= 0.9 %}Shoulder{% else %}Off-season{% endif %}
-              </span>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="bg-white rounded-xl shadow px-4 py-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-green-700">💵 Monthly Expenses — {{ current_month }}</h3>
+            <span class="text-[11px] text-gray-400">Tap a point to see exact amount</span>
+          </div>
+          <div class="mt-3 h-40">
+            <canvas id="miniLine"></canvas>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow px-4 py-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-green-700">🥧 Expenses by Category</h3>
+            <span class="text-[11px] text-gray-400">Top categories</span>
+          </div>
+          <div class="mt-3 space-y-3">
+            <div class="flex justify-center">
+              <canvas id="miniDonut" class="h-36 w-36"></canvas>
             </div>
-            <p class="mt-2 text-xl font-bold text-green-800">
-              {{ f.expected_yield_kg|floatformat:0 }} kg
-            </p>
-            <p class="text-xs text-gray-500">
-              Range: {{ f.yield_min_kg|floatformat:0 }}–{{ f.yield_max_kg|floatformat:0 }} kg
-            </p>
-            <p class="text-xs text-gray-500 mt-1">
-              Harvest: 
-              {% if f.harvest_start %}{{ f.harvest_start|date:"M j" }}{% else %}?{% endif %} –
-              {% if f.harvest_end %}{{ f.harvest_end|date:"M j" }}{% else %}?{% endif %}
-            </p>
-            <details class="mt-2">
-              <summary class="text-xs text-gray-600 cursor-pointer">Why this estimate?</summary>
-              <p class="mt-1 text-xs text-gray-500">{{ f.notes }}</p>
-            </details>
+            <div class="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
+              <ul id="miniDonutLegend" class="space-y-2 text-xs text-gray-600"></ul>
+            </div>
           </div>
-          {% endfor %}
         </div>
-      {% else %}
-        <p class="text-gray-500 text-sm">No forecasts yet. Log a planting activity to auto-generate one.</p>
-      {% endif %}
-    </div>
+      </div>
+    </section>
 
     <!-- 📋 Recent Activities -->
-    <div class="bg-white rounded-xl p-4 shadow">
-      <h3 class="text-lg font-semibold text-green-700 mb-4">📋 Recent Activities</h3>
+    <section class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6">
+      <div class="flex items-center justify-between gap-3">
+        <h3 class="text-lg font-semibold text-green-700">📋 Recent Activities</h3>
+        <a href="{% url 'activity_log' %}" class="text-xs font-medium text-green-600 hover:underline">View all</a>
+      </div>
       {% if recent_activities %}
-        <ul class="space-y-2">
+        <ul class="mt-4 divide-y divide-gray-100 text-sm">
           {% for activity in recent_activities %}
-            <li class="flex justify-between text-sm border-b pb-2">
-              <span>{{ activity.date|date:"M j" }} - {{ activity.crop.name }} ({{ activity.activity_type }})</span>
-              <span class="text-gray-400">{{ activity.date|date:"Y-m-d" }}</span>
+            <li class="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <span class="font-medium text-gray-800">{{ activity.crop.name }}</span>
+                <span class="text-gray-400">• {{ activity.activity_type|title }}</span>
+              </div>
+              <span class="text-xs text-gray-500">{{ activity.date|date:"M j, Y" }}</span>
             </li>
           {% endfor %}
         </ul>
       {% else %}
-        <p class="text-gray-500 text-sm">No recent activities yet.</p>
+        <p class="mt-4 text-sm text-gray-500">No recent activities yet.</p>
       {% endif %}
-    </div>
-
-    <!-- 🔔 Reminders -->
-    <div class="bg-white rounded-xl p-4 shadow relative">
-      <h3 class="text-lg font-semibold text-green-700 mb-4 flex justify-between items-center">
-        🔔 Reminders
-        <button onclick="openAddReminderModal()" class="bg-green-600 text-white text-sm px-3 py-1 rounded hover:bg-green-700">
-          + Add Reminder
-        </button>
-      </h3>
-
-      <!-- HTMX auto-refresh -->
-      <div id="reminderList"
-           hx-get="{% url 'refresh_reminders' %}"
-           hx-trigger="load, reminder-updated from:body"
-           hx-target="#reminderList"
-           hx-swap="innerHTML">
-        <p class="text-gray-400 text-sm">Loading reminders...</p>
-      </div>
-    </div>
+    </section>
 
   </div>
 </div>
@@ -223,13 +265,13 @@
 <!-- Delete Confirmation Modal -->
 <div id="deleteReminderModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
   <div class="bg-white w-full max-w-sm rounded-lg shadow-lg p-6 text-center">
-    <p class="text-lg mb-4">Are you sure you want to delete this reminder?</p>
+    <p class="text-lg mb-4" id="deleteReminderMessageCopy">Delete this record? This can’t be undone.</p>
     <form id="deleteReminderForm" method="POST" action="{% url 'delete_reminder' %}">
       {% csrf_token %}
       <input type="hidden" name="reminder_id" id="deleteReminderId" />
       <div class="flex justify-center space-x-4">
-        <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 text-gray-600 hover:underline">Cancel</button>
-        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
+        <button type="button" id="deleteReminderCancel" onclick="closeDeleteModal()" class="px-4 py-2 text-gray-600 hover:underline">Cancel</button>
+        <button type="submit" id="deleteReminderConfirm" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
       </div>
     </form>
   </div>
@@ -277,7 +319,7 @@
       .then(({labels, data})=>{
         const el = document.getElementById('miniLine');
         if(!el) return;
-        el.height = 110; // ensure visible height
+        el.height = 160;
 
         if(!data || data.every(v => Number(v) === 0)){
           drawNoData(el);
@@ -303,7 +345,7 @@
       .then(({labels, data})=>{
         const el = document.getElementById('miniDonut');
         if(!el) return;
-        el.height = 110;
+        el.height = 160;
 
         const hasData = data && data.some(v => Number(v) > 0);
         if(!hasData){
@@ -341,20 +383,43 @@
       const addDays = (d, n)=> { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
       const fmt = d => d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
 
+      const pagination = document.getElementById('harvestPagination');
       rail.innerHTML = tline.labels.map((name, i)=>{
         const start = addDays(today, tline.offsets[i]||0);
         const end   = addDays(start, Math.max(0, tline.windows[i]||0));
         const kgs   = kg(ymap[name]||0);
-        return `<span class="chip">
-          <strong class="text-green-800">${name}</strong>
-          <span class="text-gray-600">• ${kgs}</span>
-          <span class="text-gray-500">• ${fmt(start)}–${fmt(end)}</span>
-        </span>`;
+        return `<div class="min-w-[220px] snap-start rounded-lg border border-gray-200 bg-white px-3 py-3 text-xs shadow-sm">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-400">
+            <span>${name}</span>
+            <span>${fmt(start)} – ${fmt(end)}</span>
+          </div>
+          <p class="mt-2 text-sm font-semibold text-gray-800">${kgs}</p>
+        </div>`;
       }).join('');
+      rail.classList.add('snap-x', 'snap-mandatory');
+      if (pagination) {
+        pagination.innerHTML = tline.labels.map((_, i)=> `<span class="h-1.5 w-1.5 rounded-full bg-gray-300"></span>`).join('');
+        const dots = pagination.querySelectorAll('span');
+        const highlight = (index) => {
+          dots.forEach((dot, idx) => {
+            dot.classList.toggle('bg-green-500', idx === index);
+            dot.classList.toggle('bg-gray-300', idx !== index);
+          });
+        };
+        if (dots.length) highlight(0);
+        const card = rail.firstElementChild;
+        if (card) {
+          const cardWidth = card.getBoundingClientRect().width + 12; // include gap
+          rail.addEventListener('scroll', () => {
+            const index = Math.round(rail.scrollLeft / cardWidth);
+            highlight(Math.max(0, Math.min(dots.length - 1, index)));
+          });
+        }
+      }
     });
   };
 
-  const target = document.querySelector('.insight-card');
+  const target = document.getElementById('charts');
   if('IntersectionObserver' in window && target){
     const io = new IntersectionObserver((entries)=>{
       if(entries.some(e=>e.isIntersecting)){ init(); io.disconnect(); }
@@ -368,6 +433,7 @@
 <script>
   function openAddReminderModal() {
     document.getElementById("reminderForm").action = "{% url 'add_reminder' %}";
+    document.getElementById("reminderForm").removeAttribute("data-confirm");
     document.getElementById("reminderId").value = "";
     document.getElementById("reminderMessage").value = "";
     document.getElementById("reminderDate").value = "";
@@ -376,6 +442,7 @@
   }
   function openEditReminderModal(id, message, date) {
     document.getElementById("reminderForm").action = "{% url 'edit_reminder' %}";
+    document.getElementById("reminderForm").setAttribute("data-confirm", "edit");
     document.getElementById("reminderId").value = id;
     document.getElementById("reminderMessage").value = message;
     document.getElementById("reminderDate").value = date;
@@ -383,13 +450,17 @@
     document.getElementById("reminderModal").classList.remove("hidden");
   }
   function closeReminderModal() { document.getElementById("reminderModal").classList.add("hidden"); }
-  function openDeleteReminderModal(id) { document.getElementById("deleteReminderId").value = id; document.getElementById("deleteReminderModal").classList.remove("hidden"); }
+  function openDeleteReminderModal(id) {
+    document.getElementById("deleteReminderId").value = id;
+    const copy = window.AgriTrackConfirmCopy?.delete;
+    if (copy) {
+      document.getElementById("deleteReminderMessageCopy").textContent = copy.body;
+      document.getElementById('deleteReminderConfirm').textContent = copy.confirm || 'Delete';
+      document.getElementById('deleteReminderCancel').textContent = copy.cancel || 'Cancel';
+    }
+    document.getElementById("deleteReminderModal").classList.remove("hidden");
+  }
   function closeDeleteModal() { document.getElementById("deleteReminderModal").classList.add("hidden"); }
 
-  document.querySelectorAll('#reminderForm, #deleteReminderForm').forEach(form => {
-    form.addEventListener('submit', function () {
-      setTimeout(() => { document.body.dispatchEvent(new Event('reminder-updated')); }, 500);
-    });
-  });
 </script>
 {% endblock %}

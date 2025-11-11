@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Technician Home | AgriTrack{% endblock %}
+
+{% block content %}
+<div class="bg-green-50 min-h-screen py-6 sm:py-8">
+  <div class="mx-auto w-full max-w-5xl space-y-6 px-4 sm:px-6">
+
+    <div class="rounded-xl border border-green-200 bg-white px-4 py-3 text-sm font-medium text-green-700 shadow-sm">
+      You’re viewing <span class="font-semibold">Technician mode</span>. Farmer dashboards remain unchanged.
+    </div>
+
+    <section class="bg-white rounded-xl shadow px-5 py-6">
+      <h1 class="text-2xl font-bold text-green-700">Welcome, {{ request.user.first_name|default:request.user.username }}</h1>
+      <p class="mt-2 text-sm text-gray-600">
+        Keep an eye on farmers’ forecasts and make sure their baselines stay accurate. Need updates? Visit the Activity Log or Expenses screens as usual.
+      </p>
+      <div class="mt-4 flex flex-wrap gap-2 text-xs text-gray-500">
+        <span class="rounded-full bg-green-100 px-3 py-1 text-green-700">Access farmer dashboards via the top nav</span>
+        <span class="rounded-full bg-gray-100 px-3 py-1">Reset passwords through the Forgot password link</span>
+      </div>
+    </section>
+
+    <section class="grid gap-4 md:grid-cols-2">
+      <div class="bg-white rounded-xl shadow px-5 py-6">
+        <h2 class="text-sm font-semibold text-green-700 uppercase tracking-wide">Latest Forecast Updates</h2>
+        <ul class="mt-4 space-y-3 text-sm text-gray-600">
+          {% for f in recent_forecasts %}
+            <li class="rounded-lg border border-gray-100 px-4 py-3">
+              <div class="flex items-center justify-between text-xs text-gray-400">
+                <span>{{ f.created_at|date:"M j, Y" }}</span>
+                <span>{{ f.crop.name }}</span>
+              </div>
+              <p class="mt-1 font-semibold text-gray-800">{{ f.farmer.username }} · ~{{ f.expected_yield_kg|floatformat:0 }} kg</p>
+              <p class="text-xs text-gray-500">Harvest window: {% if f.harvest_start %}{{ f.harvest_start|date:"M j" }}{% else %}?{% endif %} – {% if f.harvest_end %}{{ f.harvest_end|date:"M j" }}{% else %}?{% endif %}</p>
+            </li>
+          {% empty %}
+            <li class="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-xs text-gray-400">
+              No forecasts yet. Encourage farmers to log planting activities.
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="bg-white rounded-xl shadow px-5 py-6">
+        <h2 class="text-sm font-semibold text-green-700 uppercase tracking-wide">Farmers to check in with</h2>
+        <ul class="mt-4 space-y-2 text-sm text-gray-600">
+          {% for farmer in assigned_farmers %}
+            <li class="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-2">
+              <span>{{ farmer.username }}</span>
+              <a href="{% url 'farmer_dashboard' %}" class="text-xs font-medium text-green-600 hover:underline">Open dashboard</a>
+            </li>
+          {% empty %}
+            <li class="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-xs text-gray-400">
+              No farmers assigned yet.
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}
+

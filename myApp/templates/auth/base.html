@@ -10,14 +10,115 @@
   <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
 
 
+    <div id="flash-region"
+         class="flex-shrink-0"
+         hx-get="{% url 'flash_messages' %}"
+         hx-trigger="flash-refresh from:body"
+         hx-target="this"
+         hx-swap="innerHTML">
+      {% include 'partials/flash_messages.html' %}
+    </div>
+
+
     <main class="flex-grow">
       {% block content %}{% endblock %}
     </main>
 
 
     
+    {% include 'partials/confirm_texts.html' %}
+    <div id="agri-confirm-modal"
+         class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="agri-confirm-title">
+      <div class="w-full max-w-md rounded-lg bg-white shadow-xl">
+        <div class="px-5 py-4 border-b">
+          <h3 id="agri-confirm-title" class="text-lg font-semibold text-gray-800"></h3>
+        </div>
+        <div class="px-5 py-4 text-sm text-gray-600" id="agri-confirm-body"></div>
+        <div class="flex justify-end gap-2 border-t px-5 py-4">
+          <button type="button"
+                  id="agri-confirm-cancel"
+                  class="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="button"
+                  id="agri-confirm-accept"
+                  class="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
       lucide.createIcons(); // auto-replace <i data-lucide="">
+      (function () {
+        const modal = document.getElementById('agri-confirm-modal');
+        if (!modal) return;
+        const titleEl = document.getElementById('agri-confirm-title');
+        const bodyEl = document.getElementById('agri-confirm-body');
+        const cancelBtn = document.getElementById('agri-confirm-cancel');
+        const acceptBtn = document.getElementById('agri-confirm-accept');
+
+        let pendingSubmit = null;
+
+        const toggleModal = (show) => {
+          modal.classList.toggle('hidden', !show);
+          modal.classList.toggle('flex', show);
+          if (!show) {
+            pendingSubmit = null;
+          }
+        };
+
+        const focusAccept = () => {
+          window.requestAnimationFrame(() => acceptBtn.focus());
+        };
+
+        document.addEventListener('submit', (evt) => {
+          const form = evt.target;
+          const confirmType = form?.dataset?.confirm;
+          if (!confirmType) return;
+
+          const copy = window.AgriTrackConfirmCopy?.[confirmType];
+          if (!copy) return;
+
+          evt.preventDefault();
+          titleEl.textContent = copy.title;
+          bodyEl.textContent = copy.body;
+          cancelBtn.textContent = copy.cancel || 'Cancel';
+          acceptBtn.textContent = copy.confirm || 'Confirm';
+
+          pendingSubmit = form;
+          toggleModal(true);
+          focusAccept();
+        }, true);
+
+        cancelBtn.addEventListener('click', () => toggleModal(false));
+        modal.addEventListener('click', (evt) => {
+          if (evt.target === modal) toggleModal(false);
+        });
+        document.addEventListener('keydown', (evt) => {
+          if (evt.key === 'Escape' && !modal.classList.contains('hidden')) {
+            evt.preventDefault();
+            toggleModal(false);
+          }
+        });
+        acceptBtn.addEventListener('click', () => {
+          if (!pendingSubmit) return;
+          const form = pendingSubmit;
+          const confirmType = form.getAttribute('data-confirm');
+          toggleModal(false);
+          form.removeAttribute('data-confirm');
+          form.submit();
+          window.requestAnimationFrame(() => {
+            if (form && confirmType) {
+              form.setAttribute('data-confirm', confirmType);
+            }
+          });
+        });
+      })();
     </script>
   </body>
 </html>

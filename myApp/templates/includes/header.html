@@ -10,7 +10,7 @@
       </a>
      
       <a href="{% url 'expense_log' %}" class="hover:underline">Expenses</a> <!-- update this when your expense URL is ready -->
-      <form method="POST" action="{% url 'logout' %}" class="inline">
+      <form method="POST" action="{% url 'logout' %}" class="inline" data-confirm="logout">
         {% csrf_token %}
         <button type="submit" class="hover:underline bg-transparent text-white focus:outline-none">
           Logout
@@ -18,4 +18,9 @@
       </form>
     </nav>
   </div>
+  {% if request.user.is_authenticated and request.user.role == 'technician' %}
+    <div class="bg-green-100 text-green-700 text-xs text-center py-1">
+      Technician mode · farmer dashboards stay unchanged
+    </div>
+  {% endif %}
 </header>
