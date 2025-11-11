@@ -2,58 +2,88 @@
 {% load static %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto py-10 px-6 space-y-8">
+<div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 space-y-8">
 
   <!-- Header -->
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <h2 class="text-3xl font-bold text-green-700">💰 Expense Tracker</h2>
-    {% if total %}
-      <div class="text-sm text-gray-500">Showing:
-        {% if selected_month %}<span class="font-medium">{{ selected_month }}</span>{% else %}All months{% endif %}
-        {% if selected_year %} <span class="ml-1">• <span class="font-medium">{{ selected_year }}</span></span>{% endif %}
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h2 class="text-3xl font-bold text-green-700">💰 Expense Tracker</h2>
+      <p class="text-sm text-gray-500 mt-1">Track farm spending, watch trends, and export clean reports.</p>
+    </div>
+    <div class="hidden sm:flex items-center gap-3 text-sm text-gray-500">
+      <span>Showing:</span>
+      <span class="font-medium">
+        {% if selected_month %}{{ selected_month_label }}{% else %}All months{% endif %}
+      </span>
+      <span class="text-gray-400">•</span>
+      <span class="font-medium">
+        {% if selected_year %}{{ selected_year }}{% else %}All years{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- Sticky mobile actions -->
+  <div class="sm:hidden sticky top-0 z-30 -mx-4 bg-green-50/95 backdrop-blur px-4 py-3 border-y border-green-100 flex flex-col gap-3">
+    <button form="add-expense-form" type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-green-700">
+      ➕ Add Expense
+    </button>
+    <details class="rounded-lg border border-green-200 bg-white px-3 py-2 text-sm text-gray-700">
+      <summary class="flex cursor-pointer list-none items-center justify-between">
+        More tools
+        <span class="text-xs text-gray-400">⋮</span>
+      </summary>
+      <div class="mt-2 space-y-2">
+        <button type="button" onclick="document.getElementById('filterForm').scrollIntoView({behavior:'smooth'})" class="block w-full rounded border border-gray-200 px-3 py-2 text-left hover:bg-gray-50">
+          🔍 Filters
+        </button>
+        <a id="exportCsvMobile" href="{% url 'export_expenses_csv' %}" class="block rounded border border-gray-200 px-3 py-2 hover:bg-gray-50">
+          ⬇ Export CSV
+        </a>
+        <a id="exportPdfMobile" href="{% url 'export_expenses_pdf' %}" class="block rounded border border-gray-200 px-3 py-2 hover:bg-gray-50">
+          ⬇ Export PDF
+        </a>
       </div>
-    {% endif %}
+    </details>
   </div>
 
   <!-- Flash Messages -->
-  {% if messages %}
-    <div class="space-y-2">
-      {% for message in messages %}
-        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-md shadow-sm">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
-
   <!-- KPI Tiles -->
-  <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <div class="bg-white border rounded-lg p-4 shadow-sm">
-      <p class="text-xs text-gray-500">Total (filtered)</p>
-      <p class="text-2xl font-bold text-green-700">₱{{ total|default:"0" }}</p>
+      <p class="text-xs uppercase tracking-wide text-gray-500">Total (filtered)</p>
+      <p class="mt-2 text-2xl font-bold text-green-700">₱{{ total|default:"0" }}</p>
     </div>
-    {# Most Spent On #}
-<div class="bg-white shadow-sm rounded-lg p-4 border">
-  <p class="text-sm text-gray-500">Most Spent On</p>
-  {% if most_spent_on %}
-    <p class="text-xl font-semibold text-gray-800">{{ most_spent_on }}</p>
-    <p class="text-xs text-gray-500">₱{{ most_spent_amount|floatformat:0 }}</p>
-  {% else %}
-    <p class="text-xl text-gray-400">—</p>
-  {% endif %}
-</div>
-
-{# Avg / Expense #}
-<div class="bg-white shadow-sm rounded-lg p-4 border">
-  <p class="text-sm text-gray-500">Avg / Expense</p>
-  <p class="text-xl font-semibold text-gray-800">₱{{ avg_expense|floatformat:0 }}</p>
-</div>
+    <div class="bg-white shadow-sm rounded-lg p-4 border">
+      <p class="text-xs uppercase tracking-wide text-gray-500">Most Spent On</p>
+      {% if most_spent_on %}
+        <p class="mt-2 text-xl font-semibold text-gray-800">{{ most_spent_on }}</p>
+        <p class="text-xs text-gray-500">₱{{ most_spent_amount|floatformat:0 }}</p>
+      {% else %}
+        <p class="mt-2 text-xl text-gray-400">—</p>
+      {% endif %}
+    </div>
+    <div class="bg-white shadow-sm rounded-lg p-4 border">
+      <p class="text-xs uppercase tracking-wide text-gray-500">Avg / Expense</p>
+      <p class="mt-2 text-xl font-semibold text-gray-800">₱{{ avg_expense|floatformat:0 }}</p>
+    </div>
+    <div class="bg-white shadow-sm rounded-lg p-4 border">
+      <p class="text-xs uppercase tracking-wide text-gray-500">YoY Trend</p>
+      {% if yoy_percent is not None %}
+        <p class="mt-2 flex items-baseline gap-2 text-xl font-semibold {% if yoy_percent >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+          {% if yoy_percent >= 0 %}↑{% else %}↓{% endif %} {{ yoy_percent|floatformat:1 }}%
+        </p>
+        <p class="text-xs text-gray-500">vs same period last year</p>
+      {% else %}
+        <p class="mt-2 text-xl text-gray-400">—</p>
+        <p class="text-xs text-gray-400">Need last year data to compare</p>
+      {% endif %}
+    </div>
   </section>
 
   <!-- Add Expense Form -->
   <section class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
     <h3 class="text-lg font-semibold text-gray-800 mb-4">➕ Add New Expense</h3>
-    <form method="post" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <form method="post" id="add-expense-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {% csrf_token %}
       <input type="hidden" name="add_expense" value="1">
       <div>{{ form.expense_type.label_tag }}{{ form.expense_type }}</div>
@@ -96,7 +126,7 @@
     </form>
 
     <!-- Export Buttons (keep current querystring) -->
-    <div class="flex gap-3">
+    <div class="hidden sm:flex gap-3">
       {% if expenses %}
         {% with qstring="?" %}
           <a id="exportCsv" href="{% url 'export_expenses_csv' %}" class="px-4 py-2 rounded text-sm font-medium border bg-white hover:bg-gray-50">
@@ -110,69 +140,118 @@
     </div>
   </section>
 
-  <!-- Charts (compact) -->
-  <section class="grid md:grid-cols-3 gap-4">
+  <!-- Charts -->
+  <section id="expense-charts" class="space-y-4">
     <div class="bg-white shadow-sm rounded-lg p-5 border">
-      <p class="text-sm font-semibold text-green-700 mb-2">📈 Monthly Total</p>
-      <div class="h-36"><canvas id="chartMonthly"></canvas></div>
+      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <h3 class="text-sm font-semibold text-green-700">📈 Monthly Expenses — {% if selected_year %}{{ selected_year }}{% else %}{{ current_year }}{% endif %}</h3>
+        <span class="text-xs text-gray-400">Hover or tap to see exact amounts</span>
+      </div>
+      <div class="mt-4 h-48">
+        <canvas id="chartMonthly"></canvas>
+      </div>
     </div>
-    <div class="bg-white shadow-sm rounded-lg p-5 border">
-      <p class="text-sm font-semibold text-green-700 mb-2">🥧 By Category</p>
-      <div class="h-36"><canvas id="chartCategory"></canvas></div>
-    </div>
-    <div class="bg-white shadow-sm rounded-lg p-5 border">
-      <p class="text-sm font-semibold text-green-700 mb-2">🏷️ Top Categories</p>
-      <div class="h-36"><canvas id="chartTopBars"></canvas></div>
+
+    <div class="grid gap-4 md:grid-cols-2">
+      <div class="bg-white shadow-sm rounded-lg p-5 border">
+        <h3 class="text-sm font-semibold text-green-700">🥧 Expenses by Category</h3>
+        <div class="mt-4 space-y-4">
+          <div class="flex justify-center">
+            <canvas id="chartCategory" class="h-48 w-48"></canvas>
+          </div>
+          <div class="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
+            <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Top categories</h4>
+            <ul id="chartCategoryLegend" class="mt-2 space-y-2 text-xs text-gray-600"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white shadow-sm rounded-lg p-5 border">
+        <h3 class="text-sm font-semibold text-green-700">🏷️ Top Categories (₱)</h3>
+        <div class="mt-4 h-48">
+          <canvas id="chartTopBars"></canvas>
+        </div>
+      </div>
     </div>
   </section>
 
   <!-- Expense Table -->
-  <section class="bg-white shadow-sm rounded-lg p-4 border">
+  <section class="space-y-4">
     <div class="flex items-center justify-between">
-      <h3 class="text-lg font-semibold text-gray-800 mb-2">📄 Expense Records</h3>
+      <h3 class="text-lg font-semibold text-gray-800">📄 Expense Records</h3>
+      <span class="hidden text-xs text-gray-400 md:block">Swipe cards on mobile, table on desktop.</span>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm border-separate border-spacing-y-2">
-        <thead class="text-gray-700 bg-gray-100 rounded">
-          <tr>
-            <th class="px-4 py-2 text-left">📅 Date</th>
-            <th class="px-4 py-2 text-left">📂 Type</th>
-            <th class="px-4 py-2 text-left">📝 Description</th>
-            <th class="px-4 py-2 text-right">💸 Amount</th>
-            <th class="px-4 py-2 text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for expense in expenses %}
-            <tr class="bg-gray-50 hover:bg-gray-100 transition">
-              <td class="px-4 py-2">{{ expense.date }}</td>
-              <td class="px-4 py-2 capitalize">{{ expense.get_expense_type_display }}</td>
-              <td class="px-4 py-2 text-gray-600">{{ expense.description|default:"—" }}</td>
-              <td class="px-4 py-2 text-right font-medium">₱{{ expense.amount }}</td>
-              <td class="px-4 py-2 text-right">
-                <button type="button"
-                        class="text-blue-600 hover:underline text-sm"
-                        onclick="openEditModal('{{ expense.id }}', '{{ expense.expense_type }}', '{{ expense.amount }}', '{{ expense.date }}', '{{ expense.description|escapejs }}')">
-                  Edit
-                </button>
-                <form method="post" class="inline-block ml-2" onsubmit="return confirm('Delete this expense?');">
-                  {% csrf_token %}
-                  <input type="hidden" name="delete_expense" value="1">
-                  <input type="hidden" name="expense_id" value="{{ expense.id }}">
-                  <button type="submit" class="text-red-600 hover:underline text-sm">Delete</button>
-                </form>
-              </td>
-            </tr>
-          {% empty %}
+    <div class="space-y-3 md:hidden">
+      {% for expense in expenses %}
+        <article class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+          <div class="flex items-center justify-between text-xs text-gray-400">
+            <span>{{ expense.date|date:"M j, Y" }}</span>
+            <span>{{ expense.get_expense_type_display }}</span>
+          </div>
+          <p class="mt-2 text-sm font-semibold text-gray-800">₱{{ expense.amount }}</p>
+          <p class="mt-1 text-xs text-gray-600">{{ expense.description|default:"—" }}</p>
+          <div class="mt-3 flex items-center justify-end gap-3 text-xs font-medium">
+            <button type="button"
+                    class="text-blue-600 hover:underline"
+                    onclick="openEditModal('{{ expense.id }}', '{{ expense.expense_type }}', '{{ expense.amount }}', '{{ expense.date }}', '{{ expense.description|escapejs }}')">
+              Edit
+            </button>
+            <form method="post" data-confirm="delete">
+              {% csrf_token %}
+              <input type="hidden" name="delete_expense" value="1">
+              <input type="hidden" name="expense_id" value="{{ expense.id }}">
+              <button type="submit" class="text-red-600 hover:underline">Delete</button>
+            </form>
+          </div>
+        </article>
+      {% empty %}
+        <p class="rounded-lg border border-dashed border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-400">No expenses found for this period.</p>
+      {% endfor %}
+    </div>
+
+    <div class="hidden md:block bg-white shadow-sm rounded-lg p-4 border">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-separate border-spacing-y-2">
+          <thead class="text-gray-700 bg-gray-100 rounded">
             <tr>
-              <td colspan="5" class="text-center text-gray-400 py-6">No expenses found for this period.</td>
+              <th class="px-4 py-2 text-left">📅 Date</th>
+              <th class="px-4 py-2 text-left">📂 Type</th>
+              <th class="px-4 py-2 text-left">📝 Description</th>
+              <th class="px-4 py-2 text-right">💸 Amount</th>
+              <th class="px-4 py-2 text-right">Action</th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="mt-4 text-right text-lg font-bold text-gray-800">
-      Total: ₱{{ total }}
+          </thead>
+          <tbody>
+            {% for expense in expenses %}
+              <tr class="bg-gray-50 hover:bg-gray-100 transition">
+                <td class="px-4 py-2">{{ expense.date }}</td>
+                <td class="px-4 py-2 capitalize">{{ expense.get_expense_type_display }}</td>
+                <td class="px-4 py-2 text-gray-600">{{ expense.description|default:"—" }}</td>
+                <td class="px-4 py-2 text-right font-medium">₱{{ expense.amount }}</td>
+                <td class="px-4 py-2 text-right">
+                  <button type="button"
+                          class="text-blue-600 hover:underline text-sm"
+                          onclick="openEditModal('{{ expense.id }}', '{{ expense.expense_type }}', '{{ expense.amount }}', '{{ expense.date }}', '{{ expense.description|escapejs }}')">
+                    Edit
+                  </button>
+                  <form method="post" class="inline-block ml-2" data-confirm="delete">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_expense" value="1">
+                    <input type="hidden" name="expense_id" value="{{ expense.id }}">
+                    <button type="submit" class="text-red-600 hover:underline text-sm">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-gray-400 py-6">No expenses found for this period.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-4 text-right text-lg font-bold text-gray-800">
+        Total: ₱{{ total }}
+      </div>
     </div>
   </section>
 
@@ -180,7 +259,7 @@
 
 <!-- Edit Modal -->
 <div id="editModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
-  <form method="post" class="bg-white p-6 rounded shadow-md w-full max-w-md">
+  <form method="post" class="bg-white p-6 rounded shadow-md w-full max-w-md" data-confirm="edit">
     {% csrf_token %}
     <input type="hidden" name="edit_expense" value="1">
     <input type="hidden" name="expense_id" id="edit-expense-id">
@@ -229,62 +308,179 @@
 
   // --------- Carry filters into export links ----------
   (function syncExportLinks(){
-    const params = new URLSearchParams(window.location.search);
-    const csv = document.getElementById('exportCsv');
-    const pdf = document.getElementById('exportPdf');
-    if(csv) { csv.href = csv.href + (params.toString() ? ('?' + params.toString()) : ''); }
-    if(pdf) { pdf.href = pdf.href + (params.toString() ? ('?' + params.toString()) : ''); }
+    const params = new URLSearchParams();
+    const monthSelect = document.getElementById('month');
+    const yearSelect = document.getElementById('year');
+    if (monthSelect && monthSelect.value) {
+      params.set('month', monthSelect.value);
+    }
+    if (yearSelect && yearSelect.value) {
+      params.set('year', yearSelect.value);
+    }
+    const suffix = params.toString() ? ('?' + params.toString()) : '';
+    ['exportCsv', 'exportPdf', 'exportCsvMobile', 'exportPdfMobile'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.synced) {
+        el.href = el.href + suffix;
+        el.dataset.synced = 'true';
+      }
+    });
   })();
 
-  // --------- Charts (small, calm) ----------
-  const green = { 100:'rgba(16,185,129,.15)', 300:'rgba(16,185,129,.35)', 500:'rgba(16,185,129,.65)', solid:'#10B981' };
+  // --------- Charts ----------
+  const palette = ['#047857', '#1D4ED8', '#F97316', '#A855F7', '#0EA5E9', '#E11D48'];
+  const fallbackColor = '#CBD5F5';
+
+  function peso(value) {
+    return '₱' + Number(value || 0).toLocaleString();
+  }
 
   function drawMonthly() {
-    // support either endpoint name
-    const url = "{% url 'expense_chart_data' %}";
+    const url = "{% url 'chart_expenses_monthly' %}";
     fetch(url + window.location.search)
       .then(r=>r.json())
       .then(({labels, data})=>{
         const el = document.getElementById('chartMonthly'); if(!el) return;
-        el.height = 140;
+        el.height = 220;
         new Chart(el, {
           type:'line',
-          data:{ labels, datasets:[{ data, label:'₱ per month', borderColor:green.solid, backgroundColor:green[100], fill:true, tension:.3, pointRadius:2 }]},
-          options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>'₱'+v.toLocaleString() } } } }
+          data:{
+            labels,
+            datasets:[{
+              data,
+              label:'Monthly Spend',
+              borderColor:palette[0],
+              backgroundColor:'rgba(4,120,87,0.12)',
+              tension:.35,
+              fill:true,
+              pointRadius:4,
+              pointHoverRadius:6,
+              pointBackgroundColor:palette[0],
+              pointBorderColor:'#fff',
+              pointBorderWidth:1.5
+            }]
+          },
+          options:{
+            maintainAspectRatio:false,
+            plugins:{
+              legend:{ display:true, labels:{ usePointStyle:true } },
+              tooltip:{
+                callbacks:{
+                  label:(ctx)=> `${ctx.dataset.label}: ${peso(ctx.parsed.y)}`
+                }
+              }
+            },
+            scales:{
+              x:{
+                title:{ display:true, text:'Month', font:{ family:'Inter, sans-serif', size:12 } }
+              },
+              y:{
+                beginAtZero:true,
+                title:{ display:true, text:'Amount (₱)', font:{ family:'Inter, sans-serif', size:12 } },
+                ticks:{ callback:(v)=>peso(v) }
+              }
+            }
+          }
         });
       });
   }
+
   function drawCategory() {
     fetch("{% url 'chart_expenses_by_category' %}" + window.location.search)
       .then(r=>r.json())
       .then(({labels, data})=>{
-        const el = document.getElementById('chartCategory'); if(!el) return;
-        el.height = 140;
+        const el = document.getElementById('chartCategory');
+        const legend = document.getElementById('chartCategoryLegend');
+        if(!el || !legend) return;
+        const total = data.reduce((sum, val)=>sum + Number(val||0), 0);
+        if(total === 0){
+          legend.innerHTML = '<li class="text-center text-gray-400">No category data yet</li>';
+        } else {
+          legend.innerHTML = labels.map((label, idx)=>{
+            const value = Number(data[idx] || 0);
+            const pct = total ? ((value / total) * 100).toFixed(1) : '0.0';
+            const color = palette[idx % palette.length];
+            return `<li class="flex items-center justify-between gap-3 rounded border border-gray-100 px-3 py-2">
+              <span class="inline-flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-full" style="background:${color}"></span>
+                ${label}
+              </span>
+              <span class="text-xs text-gray-500">${pct}% · ${peso(value)}</span>
+            </li>`;
+          }).join('');
+        }
+
+        el.height = 240;
         new Chart(el,{
           type:'doughnut',
-          data:{ labels, datasets:[{ data, backgroundColor:[green[100], green[300], green[500], green.solid, '#E5E7EB'] }]},
-          options:{ plugins:{legend:{display:false}}, cutout:'60%' }
+          data:{
+            labels,
+            datasets:[{
+              data,
+              backgroundColor:labels.map((_, idx)=> palette[idx % palette.length]),
+              borderColor:'#fff',
+              borderWidth:2
+            }]
+          },
+          options:{
+            cutout:'55%',
+            plugins:{
+              legend:{ display:false },
+              tooltip:{
+                callbacks:{
+                  label:(ctx)=> `${ctx.label}: ${peso(ctx.parsed)} (${total ? ((ctx.parsed/total)*100).toFixed(1) : 0}%)`
+                }
+              }
+            }
+          }
         });
       });
   }
+
   function drawTopBars() {
-    // reuse the same endpoint; sort client-side and show top 5
     fetch("{% url 'chart_expenses_by_category' %}" + window.location.search)
       .then(r=>r.json())
       .then(({labels, data})=>{
-        const pairs = labels.map((l,i)=>({l, v:data[i]||0})).sort((a,b)=>b.v-a.v).slice(0,5);
         const el = document.getElementById('chartTopBars'); if(!el) return;
-        el.height = 140;
+        const pairs = labels.map((l,i)=>({label:l, value:Number(data[i]||0)}))
+                            .sort((a,b)=>b.value-a.value)
+                            .slice(0,5);
+        el.height = 220;
         new Chart(el,{
           type:'bar',
-          data:{ labels:pairs.map(p=>p.l), datasets:[{ data:pairs.map(p=>p.v), backgroundColor:green[300], borderColor:green.solid, borderWidth:1 }]},
-          options:{ plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>'₱'+v.toLocaleString() } } } }
+          data:{
+            labels:pairs.map(p=>p.label),
+            datasets:[{
+              data:pairs.map(p=>p.value),
+              backgroundColor:pairs.map((_, idx)=> palette[idx % palette.length]),
+              borderRadius:6
+            }]
+          },
+          options:{
+            indexAxis:'y',
+            plugins:{
+              legend:{ display:false },
+              tooltip:{ callbacks:{ label:(ctx)=> peso(ctx.parsed.x) } }
+            },
+            scales:{
+              x:{
+                beginAtZero:true,
+                title:{ display:true, text:'Amount (₱)', font:{ family:'Inter, sans-serif', size:12 } },
+                ticks:{ callback:(v)=>peso(v) }
+              },
+              y:{
+                ticks:{ font:{ family:'Inter, sans-serif' } }
+              }
+            }
+          }
         });
       });
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
-    drawMonthly(); drawCategory(); drawTopBars();
+    drawMonthly();
+    drawCategory();
+    drawTopBars();
   });
 </script>
 {% endblock %}

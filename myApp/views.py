@@ -1,7 +1,11 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
 from .forms import CustomUserCreationForm
 from django.db import models
+from django.contrib import messages
+from django.http import HttpResponse, HttpResponseBadRequest
+import json
 
 
 def register_view(request):
@@ -28,10 +32,17 @@ def _as_int(value):
         return None
 
 
+def _hx_empty(trigger_events=None, status=204):
+    response = HttpResponse(status=status)
+    if trigger_events:
+        response['HX-Trigger'] = json.dumps(trigger_events)
+    return response
+
+
 
 from django.shortcuts import render
 from django.utils import timezone
-from .models import Activity, Forecast, Expense, Reminder, Crop
+from .models import Activity, Forecast, Expense, Reminder, Crop, User
 from datetime import datetime
 
 from collections import Counter
@@ -93,6 +104,14 @@ def farmer_dashboard(request):
             Forecast.objects.filter(farmer=user).order_by('-created_at')[:3]
         )
 
+    planting_map = {}
+    for planting in (Activity.objects
+                     .filter(farmer=user, activity_type='planting')
+                     .order_by('crop_id', '-date', '-id')):
+        planting_map.setdefault(planting.crop_id, planting.pk)
+    for fc in forecasts:
+        fc.planting_activity_id = planting_map.get(fc.crop_id)
+
     return render(request, 'myApp/farmer_dashboard.html', {
         'crop_count': crop_count,
         'forecasts': forecasts,             # ⬅️ make sure this matches the template
@@ -112,60 +131,112 @@ def role_redirect_view(request):
         if request.user.role == 'admin':
             return redirect('/admin/')
         elif request.user.role == 'technician':
-            return redirect('dashboard')  # or a different view
+            return redirect('technician_home')
         else:
             return redirect('farmer_dashboard')
     return redirect('login')
 
 
+@login_required
+def technician_home(request):
+    if request.user.role != 'technician':
+        return redirect('farmer_dashboard')
+    upcoming = (Forecast.objects
+                .filter(farmer__role='farmer')
+                .select_related('crop', 'farmer')
+                .order_by('-created_at')[:5])
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
-from .models import Reminder
+    assigned_farmers = User.objects.filter(role='farmer').order_by('username')[:10]
+
+    return render(request, 'myApp/technician_home.html', {
+        'recent_forecasts': upcoming,
+        'assigned_farmers': assigned_farmers,
+    })
+
+
+def logout_view(request):
+    if request.method == "POST":
+        logout(request)
+        messages.success(request, "You have been logged out.")
+        return redirect('login')
+    return redirect('farmer_dashboard')
+
+
+
 from django.utils import timezone
-
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseBadRequest
 from .models import Reminder
 
 def add_reminder(request):
-    if request.method == "POST":
-        message = request.POST.get("message")
-        due_date = request.POST.get("due_date")
-        if message and due_date:
-            Reminder.objects.create(farmer=request.user, message=message, due_date=due_date)
+    if request.method != "POST":
+        messages.error(request, "Reminder could not be saved.")
+        if request.headers.get('HX-Request'):
+            return _hx_empty({'flash-refresh': ''})
+        return HttpResponseBadRequest("Invalid form")
 
-            if request.headers.get('HX-Request'):  # HTMX is calling
-                return HttpResponse(status=204)  # Tell HTMX: success, no redirect
-            return redirect('farmer_dashboard')  # Normal redirect
-    return HttpResponseBadRequest("Invalid form")
+    message_text = request.POST.get("message")
+    due_date = request.POST.get("due_date")
+    if not (message_text and due_date):
+        messages.error(request, "Please provide both a reminder message and due date.")
+        if request.headers.get('HX-Request'):
+            return _hx_empty({'flash-refresh': ''})
+        return redirect('farmer_dashboard')
+
+    Reminder.objects.create(farmer=request.user, message=message_text, due_date=due_date)
+    messages.success(request, "Reminder saved.")
+
+    if request.headers.get('HX-Request'):
+        return _hx_empty({'flash-refresh': '', 'reminder-updated': ''})
+    return redirect('farmer_dashboard')
 
 def edit_reminder(request):
-    if request.method == "POST":
-        reminder_id = request.POST.get("reminder_id")
-        reminder = Reminder.objects.filter(id=reminder_id, farmer=request.user).first()
-        if reminder:
-            reminder.message = request.POST.get("message")
-            reminder.due_date = request.POST.get("due_date")
-            reminder.save()
-            if request.headers.get('HX-Request'):
-                return HttpResponse(status=204)
-            return redirect('farmer_dashboard')
-    return HttpResponseBadRequest("Invalid form")
+    if request.method != "POST":
+        messages.error(request, "Reminder update failed.")
+        if request.headers.get('HX-Request'):
+            return _hx_empty({'flash-refresh': ''})
+        return HttpResponseBadRequest("Invalid form")
+
+    reminder_id = request.POST.get("reminder_id")
+    reminder = Reminder.objects.filter(id=reminder_id, farmer=request.user).first()
+    if not reminder:
+        messages.error(request, "Reminder not found.")
+        if request.headers.get('HX-Request'):
+            return _hx_empty({'flash-refresh': ''})
+        return redirect('farmer_dashboard')
+
+    reminder.message = request.POST.get("message")
+    reminder.due_date = request.POST.get("due_date")
+    reminder.save()
+    messages.success(request, "Reminder updated.")
+
+    if request.headers.get('HX-Request'):
+        return _hx_empty({'flash-refresh': '', 'reminder-updated': ''})
+    return redirect('farmer_dashboard')
 
 def delete_reminder(request):
-    if request.method == "POST":
-        reminder_id = request.POST.get("reminder_id")
-        Reminder.objects.filter(id=reminder_id, farmer=request.user).delete()
+    if request.method != "POST":
+        messages.error(request, "Reminder delete failed.")
         if request.headers.get('HX-Request'):
-            return HttpResponse(status=204)
-        return redirect('farmer_dashboard')
-    return HttpResponseBadRequest("Invalid request")
+            return _hx_empty({'flash-refresh': ''})
+        return HttpResponseBadRequest("Invalid request")
+
+    reminder_id = request.POST.get("reminder_id")
+    deleted, _ = Reminder.objects.filter(id=reminder_id, farmer=request.user).delete()
+    if deleted:
+        messages.success(request, "Reminder deleted.")
+    else:
+        messages.warning(request, "Reminder was not found.")
+
+    if request.headers.get('HX-Request'):
+        return _hx_empty({'flash-refresh': '', 'reminder-updated': ''})
+    return redirect('farmer_dashboard')
 
 def refresh_reminders(request):
     today = timezone.now().date()
     reminders = Reminder.objects.filter(farmer=request.user, due_date__gte=today).order_by('due_date')
     return render(request, 'partials/reminder_list.html', {'reminders': reminders})
+
+def flash_messages(request):
+    return render(request, 'partials/flash_messages.html')
 
 from django.shortcuts import render, redirect
 from .forms import ActivityForm
@@ -335,12 +406,29 @@ def expense_log_view(request):
     expenses = Expense.objects.filter(farmer=user).order_by('-date')
 
     # ---- Filters (support month OR year OR both) ----
-    month = request.GET.get('month')
-    year = request.GET.get('year')
-    if year:
-        expenses = expenses.filter(date__year=year)
-    if month:
-        expenses = expenses.filter(date__month=month)
+    today = timezone.now()
+    current_year = today.year
+    month_param = request.GET.get('month')
+    year_param = request.GET.get('year')
+
+    if year_param is None:
+        selected_year = str(current_year)
+    else:
+        selected_year = year_param  # can be '' for "all years"
+
+    if selected_year:
+        expenses = expenses.filter(date__year=selected_year)
+
+    selected_month = month_param or ''
+    if selected_month:
+        expenses = expenses.filter(date__month=selected_month)
+    if selected_month:
+        try:
+            selected_month_label = calendar.month_name[int(selected_month)]
+        except (TypeError, ValueError):
+            selected_month_label = selected_month
+    else:
+        selected_month_label = ''
 
     # ---- POST actions ----
     if request.method == 'POST':
@@ -396,7 +484,6 @@ def expense_log_view(request):
         most_spent_amount = 0.0
 
     # ---- Optional: current-month quick summary (if you still show this elsewhere) ----
-    today = timezone.now()
     current_month_expenses = Expense.objects.filter(
         farmer=user, date__year=today.year, date__month=today.month
     )
@@ -417,8 +504,35 @@ def expense_log_view(request):
 
     # ---- Month/Year drop-down options ----
     months = [(str(i).zfill(2), calendar.month_name[i]) for i in range(1, 13)]
-    current_year = datetime.now().year
     years = [str(y) for y in range(current_year - 2, current_year + 2)]
+    if str(current_year) not in years:
+        years.append(str(current_year))
+    years = sorted(set(years))
+
+    # ---- YoY Delta ----
+    yoy_percent = None
+    year_int = None
+    try:
+        year_int = int(selected_year) if selected_year else None
+    except (TypeError, ValueError):
+        year_int = None
+    month_int = None
+    try:
+        month_int = int(selected_month) if selected_month else None
+    except (TypeError, ValueError):
+        month_int = None
+
+    current_total_float = float(total or 0)
+    if year_int:
+        prev_qs = Expense.objects.filter(farmer=user, date__year=year_int - 1)
+        if month_int:
+            prev_qs = prev_qs.filter(date__month=month_int)
+        prev_total = prev_qs.aggregate(total=Sum('amount'))['total'] or 0
+        prev_total_float = float(prev_total)
+        if prev_total_float > 0:
+            yoy_percent = ((current_total_float - prev_total_float) / prev_total_float) * 100.0
+        else:
+            yoy_percent = None
 
     return render(request, 'myApp/expense_log.html', {
         'form': form,
@@ -431,40 +545,72 @@ def expense_log_view(request):
         'most_spent_amount': most_spent_amount,
 
         # Filters
-        'selected_month': month,
-        'selected_year': year,
+        'selected_month': selected_month,
+        'selected_month_label': selected_month_label,
+        'selected_year': selected_year,
         'months': months,
         'years': years,
+        'current_year': current_year,
 
         # Optional extras you already used elsewhere
         'monthly_total': monthly_total,
         'most_common_expense': most_common_expense,
         'last_recorded': last_recorded,
+        'yoy_percent': yoy_percent,
     })
 
 
-from django.http import JsonResponse
-from django.db.models.functions import TruncMonth
-from django.db.models import Sum
-
 @login_required
-def expense_chart_data(request):
-    user = request.user
+def planting_detail_view(request, pk):
+    activity = get_object_or_404(Activity, pk=pk, farmer=request.user, activity_type='planting')
+    crop = activity.crop
+    forecast_snapshot = compute_forecast_from_activity(activity)
 
-    # Monthly total expenses
-    monthly_data = (
-        Expense.objects.filter(farmer=user)
-        .annotate(month=TruncMonth('date'))
-        .values('month')
-        .annotate(total=Sum('amount'))
-        .order_by('month')
-    )
+    latest_forecast = (Forecast.objects
+                       .filter(farmer=request.user, crop=crop)
+                       .order_by('-created_at')
+                       .first())
 
-    labels = [entry['month'].strftime('%B %Y') for entry in monthly_data]
-    data = [float(entry['total']) for entry in monthly_data]
+    if request.method == 'POST' and request.POST.get('recalculate'):
+        data = compute_forecast_from_activity(activity)
+        latest_forecast, _ = Forecast.objects.update_or_create(
+            farmer=activity.farmer,
+            crop=activity.crop,
+            forecast_date=timezone.now().date(),
+            defaults={
+                "expected_yield_kg": data["expected_yield_kg"],
+                "yield_min_kg": data["yield_min_kg"],
+                "yield_max_kg": data["yield_max_kg"],
+                "season_factor": data["season_factor"],
+                "input_factor": data["input_factor"],
+                "population_factor": data["population_factor"],
+                "harvest_start": data["harvest_start"],
+                "harvest_end": data["harvest_end"],
+                "notes": data["notes"],
+                "created_at": timezone.now(),
+            }
+        )
+        messages.success(request, "Forecast recalculated with the latest crop baselines.")
+        return redirect('planting_detail', pk=activity.pk)
 
-    return JsonResponse({'labels': labels, 'data': data})
+    baseline = {
+        "seed_rate_min": crop.seed_rate_min_kg,
+        "seed_rate_max": crop.seed_rate_max_kg,
+        "fert_sacks_min": crop.fert_sacks_min,
+        "fert_sacks_max": crop.fert_sacks_max,
+        "yield_t_min": crop.yield_t_min,
+        "yield_t_max": crop.yield_t_max,
+        "harvest_days_min": crop.days_to_harvest_min,
+        "harvest_days_max": crop.days_to_harvest_max,
+    }
 
+    return render(request, 'myApp/planting_detail.html', {
+        'activity': activity,
+        'forecast_snapshot': forecast_snapshot,
+        'latest_forecast': latest_forecast,
+        'baseline': baseline,
+        'crop': crop,
+    })
 
 
 import csv
@@ -743,7 +889,7 @@ from .models import Expense
 def chart_expenses_monthly(request):
     """12 months for the selected or current year, filtered to this farmer."""
     user = request.user
-    year = int(request.GET.get('year', timezone.now().year))
+    year = _as_int(request.GET.get('year')) or timezone.now().year
 
     qs = (
         Expense.objects
@@ -762,15 +908,16 @@ def chart_expenses_by_category(request):
     """Sum by expense_type for the current month (or ?month=&year=)."""
     user = request.user
     now = timezone.now()
-    month = int(request.GET.get('month', now.month))
-    year = int(request.GET.get('year', now.year))
+    year = _as_int(request.GET.get('year')) or now.year
+    month = _as_int(request.GET.get('month'))
 
+    qs = Expense.objects.filter(farmer=user, date__year=year)
+    if month:
+        qs = qs.filter(date__month=month)
     qs = (
-        Expense.objects
-        .filter(farmer=user, date__year=year, date__month=month)
-        .values('expense_type')
-        .annotate(total=Sum('amount'))
-        .order_by('-total')
+        qs.values('expense_type')
+          .annotate(total=Sum('amount'))
+          .order_by('-total')
     )
 
     type_map = dict(Expense.EXPENSE_TYPES)
