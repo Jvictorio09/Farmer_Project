@@ -144,18 +144,54 @@
       })();
 
       // Notification bell dropdown functionality
-      function toggleNotificationDropdown() {
-        const dropdown = document.getElementById('notification-dropdown');
-        const dropdownMobile = document.getElementById('notification-dropdown-mobile');
-        
-        // Toggle desktop dropdown
-        if (dropdown) {
-          dropdown.classList.toggle('hidden');
+      function toggleNotificationDropdown(event) {
+        if (event) {
+          event.stopPropagation();
         }
         
-        // Toggle mobile dropdown
-        if (dropdownMobile) {
+        const dropdown = document.getElementById('notification-dropdown');
+        const dropdownMobile = document.getElementById('notification-dropdown-mobile');
+        const bell = document.getElementById('notification-bell');
+        const bellMobile = document.getElementById('notification-bell-mobile');
+        
+        // Determine which dropdown to toggle based on which button was clicked or which dropdown contains the close button
+        let isMobile = false;
+        let isCloseButton = false;
+        
+        if (event && event.target) {
+          // Check if clicking close button inside dropdown
+          if (dropdown && dropdown.contains(event.target) && !bell.contains(event.target)) {
+            isCloseButton = true;
+            dropdown.classList.add('hidden');
+            return;
+          }
+          if (dropdownMobile && dropdownMobile.contains(event.target) && !bellMobile.contains(event.target)) {
+            isCloseButton = true;
+            dropdownMobile.classList.add('hidden');
+            return;
+          }
+          
+          // Check which bell button was clicked
+          isMobile = event.target.closest('#notification-bell-mobile') !== null || 
+                    event.target === bellMobile ||
+                    (bellMobile && bellMobile.contains(event.target));
+        }
+        
+        // Toggle the appropriate dropdown
+        if (isMobile && dropdownMobile) {
+          // Toggle mobile dropdown
           dropdownMobile.classList.toggle('hidden');
+          // Close desktop dropdown if open
+          if (dropdown) {
+            dropdown.classList.add('hidden');
+          }
+        } else if (dropdown) {
+          // Toggle desktop dropdown
+          dropdown.classList.toggle('hidden');
+          // Close mobile dropdown if open
+          if (dropdownMobile) {
+            dropdownMobile.classList.add('hidden');
+          }
         }
         
         // Close mobile menu if open
@@ -169,11 +205,17 @@
         const dropdown = document.getElementById('notification-dropdown');
         const dropdownMobile = document.getElementById('notification-dropdown-mobile');
         
-        if (dropdown && ((bell && !bell.contains(event.target)) || (bellMobile && !bellMobile.contains(event.target))) && !dropdown.contains(event.target)) {
+        // Check if click is on bell button or inside dropdown
+        const clickedOnBell = (bell && bell.contains(event.target)) || (bellMobile && bellMobile.contains(event.target));
+        const clickedInDropdown = (dropdown && dropdown.contains(event.target)) || (dropdownMobile && dropdownMobile.contains(event.target));
+        
+        // Close desktop dropdown if click is outside
+        if (dropdown && !clickedOnBell && !clickedInDropdown) {
           dropdown.classList.add('hidden');
         }
         
-        if (dropdownMobile && ((bell && !bell.contains(event.target)) || (bellMobile && !bellMobile.contains(event.target))) && !dropdownMobile.contains(event.target)) {
+        // Close mobile dropdown if click is outside
+        if (dropdownMobile && !clickedOnBell && !clickedInDropdown) {
           dropdownMobile.classList.add('hidden');
         }
       });

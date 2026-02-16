@@ -189,9 +189,9 @@
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
             <h4 id="mName" class="text-lg sm:text-xl font-semibold text-slate-900 truncate"></h4>
-            <span id="mBadgeAvail" class="hidden inline-flex items-center rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">✅ Available</span>
-            <span id="mBadgeRef" class="hidden inline-flex items-center rounded-full bg-slate-700 px-2.5 py-1 text-xs font-semibold text-white">📖 Reference</span>
-            <span id="mBadgeSeason" class="hidden inline-flex items-center rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white">🌤️ Ideal</span>
+            <span id="mBadgeAvail" class="hidden inline-flex items-center rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-black">✅ Available</span>
+            <span id="mBadgeRef" class="hidden inline-flex items-center rounded-full bg-slate-700 px-2.5 py-1 text-xs font-semibold text-black">📖 Reference</span>
+            <span id="mBadgeSeason" class="hidden inline-flex items-center rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-black">🌤️ Ideal</span>
           </div>
           <p id="mDesc" class="mt-1 text-sm text-slate-600"></p>
         </div>
@@ -244,7 +244,7 @@
 
         <div class="flex flex-col sm:flex-row gap-3">
           <a id="mPlantBtn" href="{% url 'activity_log' %}"
-             class="hidden flex-1 text-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/35">
+             class="hidden flex-1 text-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-black font-semibold py-3 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/35">
             🌱 Plant this crop
           </a>
           <button id="mClose2"
@@ -271,7 +271,7 @@
           "name": "{{ c.name|escapejs }}",
           "description": "{{ c.description|default:''|escapejs }}",
           "ideal_seasons": "{{ c.ideal_seasons|default:''|escapejs }}",
-          "ideal_months": "{{ c.ideal_months|join:','|escapejs }}",
+          "ideal_months": "{% if c.ideal_months %}{{ c.ideal_months|join:','|escapejs }}{% else %}{% endif %}",
           "available": {% if c.available %}true{% else %}false{% endif %},
           "season_match": {% if c.season_match %}true{% else %}false{% endif %},
           "avg_yield": {{ c.avg_yield|default:0 }},
@@ -298,8 +298,16 @@
 <script>
 (function () {
   const dataEl = document.getElementById('calendarData');
-  const payload = dataEl ? JSON.parse(dataEl.textContent) : { months: [] };
-  const monthsMap = new Map(payload.months.map(m => [m.abbr, m]));
+  let payload = { months: [] };
+  try {
+    if (dataEl) {
+      payload = JSON.parse(dataEl.textContent);
+    }
+  } catch (e) {
+    console.error('Error parsing calendar data:', e);
+    payload = { months: [] };
+  }
+  const monthsMap = new Map((payload.months || []).map(m => [m.abbr, m]));
 
   const yearGrid = document.getElementById('yearGrid');
   const monthOverlay = document.getElementById('monthOverlay');
@@ -441,7 +449,7 @@
 
   function closeCropModal() {
     cropBackdrop.classList.add('hidden');
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = '';
   }
 
   cropBackdrop.addEventListener('click', (e) => {

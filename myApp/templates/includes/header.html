@@ -5,15 +5,16 @@
             <h1 class="text-xl sm:text-2xl font-bold tracking-tight">🌾 Agrilog+</h1>
             
             <!-- Desktop: Right side items (Notification + Logout) -->
-            <div class="hidden md:flex items-center gap-4">
+            <div class="hidden md:flex items-center gap-4 relative z-10">
                 {% if has_upcoming_harvests %}
                 <!-- Notification Bell -->
                 <div class="relative">
                     <button 
                         id="notification-bell"
-                        onclick="toggleNotificationDropdown()"
+                        onclick="toggleNotificationDropdown(event)"
                         class="relative p-2 rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors"
-                        aria-label="Harvest notifications">
+                        aria-label="Harvest notifications"
+                        type="button">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                         </svg>
@@ -31,8 +32,9 @@
                             <div class="flex items-center justify-between">
                                 <h3 class="text-lg font-semibold text-gray-800">🌾 Harvest Reminders</h3>
                                 <button 
-                                    onclick="toggleNotificationDropdown()"
-                                    class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                    onclick="toggleNotificationDropdown(event)"
+                                    class="text-gray-500 hover:text-gray-700 focus:outline-none"
+                                    type="button">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
@@ -97,20 +99,20 @@
                 {% endif %}
                 
                 <!-- Desktop Navigation Links -->
-                <nav class="flex items-center space-x-4 text-sm font-medium">
-                    <a href="{% url 'farmer_dashboard' %}" class="hover:underline {% if request.path == '/dashboard/' %}underline font-bold{% endif %}">
+                <nav class="flex items-center space-x-4 text-sm font-medium" role="navigation" aria-label="Main navigation">
+                    <a href="{% url 'farmer_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                         Dashboard
                     </a>
-                    <a href="{% url 'activity_log' %}" class="hover:underline {% if request.path == '/activities/' %}underline font-bold{% endif %}">
+                    <a href="{% url 'activity_log' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/activities/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                         Activities
                     </a>
-                    <a href="{% url 'expense_log' %}" class="hover:underline {% if request.path == '/expenses/' %}underline font-bold{% endif %}">
+                    <a href="{% url 'expense_log' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/expenses/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                         Expenses
                     </a>
-                    <a href="{% url 'reports' %}" class="hover:underline {% if request.path == '/reports/' %}underline font-bold{% endif %}">
+                    <a href="{% url 'reports' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/reports/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                         Reports
                     </a>
-                    <a href="{% url 'crop_reference_guide' %}" class="hover:underline {% if request.path == '/crop-reference/' %}underline font-bold{% endif %}">
+                    <a href="{% url 'crop_reference_guide' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/crop-reference/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                         Crop Guide
                     </a>
                 </nav>
@@ -131,9 +133,10 @@
                 <div class="relative">
                     <button 
                         id="notification-bell-mobile"
-                        onclick="toggleNotificationDropdown()"
+                        onclick="toggleNotificationDropdown(event)"
                         class="relative p-2 rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors"
-                        aria-label="Harvest notifications">
+                        aria-label="Harvest notifications"
+                        type="button">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                         </svg>
@@ -150,8 +153,9 @@
                             <div class="flex items-center justify-between">
                                 <h3 class="text-lg font-semibold text-gray-800">🌾 Harvest Reminders</h3>
                                 <button 
-                                    onclick="toggleNotificationDropdown()"
-                                    class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                    onclick="toggleNotificationDropdown(event)"
+                                    class="text-gray-500 hover:text-gray-700 focus:outline-none"
+                                    type="button">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
@@ -235,24 +239,24 @@
         <!-- Mobile Menu Dropdown -->
         <nav id="mobile-menu" class="hidden md:hidden mt-4 pb-2 border-t border-green-600">
             <div class="flex flex-col space-y-1 pt-3">
-                <a href="{% url 'farmer_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                <a href="{% url 'farmer_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
                     Dashboard
                 </a>
-                <a href="{% url 'activity_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/activities/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                <a href="{% url 'activity_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/activities/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
                     Activities
                 </a>
-                <a href="{% url 'expense_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/expenses/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                <a href="{% url 'expense_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/expenses/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
                     Expenses
                 </a>
-                <a href="{% url 'reports' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/reports/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                <a href="{% url 'reports' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/reports/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
                     Reports
                 </a>
-                <a href="{% url 'crop_reference_guide' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/crop-reference/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                <a href="{% url 'crop_reference_guide' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/crop-reference/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
                     Crop Guide
                 </a>
-                <form method="POST" action="{% url 'logout' %}" class="px-3 py-2" data-confirm="logout" onclick="closeMobileMenu()">
+                <form method="POST" action="{% url 'logout' %}" class="px-3 py-2" data-confirm="logout">
                     {% csrf_token %}
-                    <button type="submit" class="w-full text-left text-sm font-medium hover:bg-green-600 rounded-md px-3 py-2 -mx-3 -my-2">
+                    <button type="submit" class="w-full text-left text-sm font-medium hover:bg-green-600 rounded-md px-3 py-2 -mx-3 -my-2 cursor-pointer transition-colors" onclick="closeMobileMenu()">
                         Logout
                     </button>
                 </form>
