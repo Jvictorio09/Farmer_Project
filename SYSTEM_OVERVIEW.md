@@ -1,7 +1,7 @@
-# AgriTrack System Overview
+# Agrilog+ System Overview
 
 ## 1. Product Summary
-- **Purpose**: AgriTrack centralizes day-to-day farm operations (activity logging, expense tracking, yield forecasting, reminders) for smallholder farmers and their support staff.
+- **Purpose**: Agrilog+ centralizes day-to-day farm operations (activity logging, expense tracking, yield forecasting, reminders) for smallholder farmers and their support staff.
 - **Primary Actors**: `farmer`, `technician`, and `admin` roles share a common auth surface; all dashboards currently target farmers.
 - **Key Capabilities**:
   - Capture field activities and automatically derive crop yield forecasts.
@@ -152,5 +152,5 @@
 
 ---
 
-This document should serve as the canonical reference for developers onboarding to AgriTrack, mapping model relationships, request flows, and integration points across the Django project.
+This document should serve as the canonical reference for developers onboarding to Agrilog+, mapping model relationships, request flows, and integration points across the Django project.
 

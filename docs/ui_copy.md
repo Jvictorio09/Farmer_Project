@@ -1,4 +1,4 @@
-# AgriTrack UI Copy Guide
+# Agrilog+ UI Copy Guide
 
 ## Confirmations
 - **Delete**: “Delete this record? This can’t be undone.”
@@ -21,7 +21,7 @@
 ## Auth
 - Logout success: “You have been logged out.”
 - Password reset request: “If that email exists, we’ve sent a link to reset your password.”
-- Forgot password helper: “Pop in the email linked to your AgriTrack account. We’ll send a reset link right away.”
+- Forgot password helper: “Pop in the email linked to your Agriplus account. We’ll send a reset link right away.”
 - Password reset status: “Reset link sent” / “Set a new password” / “Password updated”
 
 ## Chart Labels

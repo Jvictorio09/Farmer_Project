@@ -1,486 +1,270 @@
-{% extends "base.html" %}
-{% load static %}
-
-{% block content %}
+{% extends "base.html" %} {% load static %} {% block content %}
 <div class="max-w-5xl mx-auto py-10 px-4 sm:px-6 space-y-8">
 
-  <!-- Header -->
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-    <div>
-      <h2 class="text-3xl font-bold text-green-700">💰 Expense Tracker</h2>
-      <p class="text-sm text-gray-500 mt-1">Track farm spending, watch trends, and export clean reports.</p>
+    <!-- Header -->
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h2 class="text-3xl font-bold text-green-700">💰 Expense Tracker</h2>
+            <p class="text-sm text-gray-500 mt-1">Track farm spending, watch trends, and export clean reports.</p>
+        </div>
     </div>
-    <div class="hidden sm:flex items-center gap-3 text-sm text-gray-500">
-      <span>Showing:</span>
-      <span class="font-medium">
-        {% if selected_month %}{{ selected_month_label }}{% else %}All months{% endif %}
-      </span>
-      <span class="text-gray-400">•</span>
-      <span class="font-medium">
-        {% if selected_year %}{{ selected_year }}{% else %}All years{% endif %}
-      </span>
-    </div>
-  </div>
 
-  <!-- Sticky mobile actions -->
-  <div class="sm:hidden sticky top-0 z-30 -mx-4 bg-green-50/95 backdrop-blur px-4 py-3 border-y border-green-100 flex flex-col gap-3">
-    <button form="add-expense-form" type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-green-700">
-      ➕ Add Expense
-    </button>
-    <details class="rounded-lg border border-green-200 bg-white px-3 py-2 text-sm text-gray-700">
-      <summary class="flex cursor-pointer list-none items-center justify-between">
-        More tools
-        <span class="text-xs text-gray-400">⋮</span>
-      </summary>
-      <div class="mt-2 space-y-2">
-        <button type="button" onclick="document.getElementById('filterForm').scrollIntoView({behavior:'smooth'})" class="block w-full rounded border border-gray-200 px-3 py-2 text-left hover:bg-gray-50">
-          🔍 Filters
-        </button>
-        <a id="exportCsvMobile" href="{% url 'export_expenses_csv' %}" class="block rounded border border-gray-200 px-3 py-2 hover:bg-gray-50">
-          ⬇ Export CSV
-        </a>
-        <a id="exportPdfMobile" href="{% url 'export_expenses_pdf' %}" class="block rounded border border-gray-200 px-3 py-2 hover:bg-gray-50">
-          ⬇ Export PDF
-        </a>
-      </div>
-    </details>
-  </div>
+    <!-- KPI Tiles -->
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="bg-white border rounded-lg p-4 shadow-sm">
+            <p class="text-xs uppercase tracking-wide text-gray-500">Total</p>
+            <p class="mt-2 text-2xl font-bold text-green-700">₱{{ total|default:"0" }}</p>
+        </div>
+    </section>
 
-  <!-- Flash Messages -->
-  <!-- KPI Tiles -->
-  <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <div class="bg-white border rounded-lg p-4 shadow-sm">
-      <p class="text-xs uppercase tracking-wide text-gray-500">Total (filtered)</p>
-      <p class="mt-2 text-2xl font-bold text-green-700">₱{{ total|default:"0" }}</p>
-    </div>
-    <div class="bg-white shadow-sm rounded-lg p-4 border">
-      <p class="text-xs uppercase tracking-wide text-gray-500">Most Spent On</p>
-      {% if most_spent_on %}
-        <p class="mt-2 text-xl font-semibold text-gray-800">{{ most_spent_on }}</p>
-        <p class="text-xs text-gray-500">₱{{ most_spent_amount|floatformat:0 }}</p>
-      {% else %}
-        <p class="mt-2 text-xl text-gray-400">—</p>
-      {% endif %}
-    </div>
-    <div class="bg-white shadow-sm rounded-lg p-4 border">
-      <p class="text-xs uppercase tracking-wide text-gray-500">Avg / Expense</p>
-      <p class="mt-2 text-xl font-semibold text-gray-800">₱{{ avg_expense|floatformat:0 }}</p>
-    </div>
-    <div class="bg-white shadow-sm rounded-lg p-4 border">
-      <p class="text-xs uppercase tracking-wide text-gray-500">YoY Trend</p>
-      {% if yoy_percent is not None %}
-        <p class="mt-2 flex items-baseline gap-2 text-xl font-semibold {% if yoy_percent >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-          {% if yoy_percent >= 0 %}↑{% else %}↓{% endif %} {{ yoy_percent|floatformat:1 }}%
-        </p>
-        <p class="text-xs text-gray-500">vs same period last year</p>
-      {% else %}
-        <p class="mt-2 text-xl text-gray-400">—</p>
-        <p class="text-xs text-gray-400">Need last year data to compare</p>
-      {% endif %}
-    </div>
-  </section>
+    <!-- ✅ ADD EXPENSE FORM (FIXED) -->
+    <section class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">➕ Add New Expense</h3>
 
-  <!-- Add Expense Form -->
-  <section class="bg-white shadow-sm rounded-lg p-6 border border-gray-200">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">➕ Add New Expense</h3>
-    <form method="post" id="add-expense-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {% csrf_token %}
-      <input type="hidden" name="add_expense" value="1">
-      <div>{{ form.expense_type.label_tag }}{{ form.expense_type }}</div>
-      <div>{{ form.amount.label_tag }}{{ form.amount }}</div>
-      <div>{{ form.date.label_tag }}{{ form.date }}</div>
-      <div class="sm:col-span-2">{{ form.description.label_tag }}{{ form.description }}</div>
-      <div class="sm:col-span-2 text-right">
-        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md font-medium text-sm">
+        <form method="post" id="add-expense-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% csrf_token %}
+            <input type="hidden" name="add_expense" value="1">
+
+            <!-- 🔧 THIS IS THE FIX -->
+            <div>
+                {{ form.crop.label_tag }} {{ form.crop }}
+            </div>
+
+            <div>
+                {{ form.expense_type.label_tag }} {{ form.expense_type }}
+            </div>
+
+            <div>
+                {{ form.amount.label_tag }} {{ form.amount }}
+            </div>
+
+            <div>
+                {{ form.date.label_tag }} {{ form.date }}
+            </div>
+
+            <div class="sm:col-span-2">
+                {{ form.description.label_tag }} {{ form.description }}
+            </div>
+
+            <div class="sm:col-span-2 text-right">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md font-medium text-sm">
           Save Expense
         </button>
-      </div>
-    </form>
-  </section>
+            </div>
+        </form>
+    </section>
 
-  <!-- Filters + Export -->
-  <section class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 bg-gray-50 p-4 border rounded-lg">
-    <!-- Filter Form -->
-    <form id="filterForm" method="get" class="flex flex-wrap gap-4 items-end">
-      <div>
-        <label for="month" class="text-sm font-medium text-gray-700">Month</label>
-        <select name="month" id="month" class="border px-3 py-2 rounded text-sm">
-          <option value="">All Months</option>
-          {% for value, name in months %}
-            <option value="{{ value }}" {% if value == selected_month %}selected{% endif %}>{{ name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label for="year" class="text-sm font-medium text-gray-700">Year</label>
-        <select name="year" id="year" class="border px-3 py-2 rounded text-sm">
-          <option value="">All Years</option>
-          {% for y in years %}
-            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">
-        Filter
-      </button>
-    </form>
+    <!-- Expense Table -->
+    <section class="space-y-4">
+        <h3 class="text-lg font-semibold text-gray-800">📄 Expense Records</h3>
 
-    <!-- Export Buttons (keep current querystring) -->
-    <div class="hidden sm:flex gap-3">
-      {% if expenses %}
-        {% with qstring="?" %}
-          <a id="exportCsv" href="{% url 'export_expenses_csv' %}" class="px-4 py-2 rounded text-sm font-medium border bg-white hover:bg-gray-50">
-            ⬇ CSV
-          </a>
-          <a id="exportPdf" href="{% url 'export_expenses_pdf' %}" class="px-4 py-2 rounded text-sm font-medium border bg-white hover:bg-gray-50">
-            ⬇ PDF
-          </a>
-        {% endwith %}
-      {% endif %}
-    </div>
-  </section>
-
-  <!-- Charts -->
-  <section id="expense-charts" class="space-y-4">
-    <div class="bg-white shadow-sm rounded-lg p-5 border">
-      <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <h3 class="text-sm font-semibold text-green-700">📈 Monthly Expenses — {% if selected_year %}{{ selected_year }}{% else %}{{ current_year }}{% endif %}</h3>
-        <span class="text-xs text-gray-400">Hover or tap to see exact amounts</span>
-      </div>
-      <div class="mt-4 h-48">
-        <canvas id="chartMonthly"></canvas>
-      </div>
-    </div>
-
-    <div class="grid gap-4 md:grid-cols-2">
-      <div class="bg-white shadow-sm rounded-lg p-5 border">
-        <h3 class="text-sm font-semibold text-green-700">🥧 Expenses by Category</h3>
-        <div class="mt-4 space-y-4">
-          <div class="flex justify-center">
-            <canvas id="chartCategory" class="h-48 w-48"></canvas>
-          </div>
-          <div class="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
-            <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Top categories</h4>
-            <ul id="chartCategoryLegend" class="mt-2 space-y-2 text-xs text-gray-600"></ul>
-          </div>
+        <div class="bg-white shadow-sm rounded-lg p-4 border overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Date</th>
+                        <th class="px-4 py-2 text-left">Crop</th>
+                        <th class="px-4 py-2 text-left">Type</th>
+                        <th class="px-4 py-2 text-left">Description</th>
+                        <th class="px-4 py-2 text-right">Amount</th>
+                        <th class="px-4 py-2 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in expenses %}
+                    <tr class="border-t">
+                        <td class="px-4 py-2">{{ expense.date }}</td>
+                        <td class="px-4 py-2">
+                            {{ expense.crop.name|default:"—" }}
+                        </td>
+                        <td class="px-4 py-2">{{ expense.get_expense_type_display }}</td>
+                        <td class="px-4 py-2">{{ expense.description|default:"—" }}</td>
+                        <td class="px-4 py-2 text-right font-medium">₱{{ expense.amount }}</td>
+                        <td class="px-4 py-2 text-right">
+                            <button onclick="openEditExpenseModal({{ expense.id }})" class="text-blue-600 hover:underline text-sm mr-2">Edit</button>
+                            <button onclick="openDeleteExpenseModal({{ expense.id }})" class="text-red-600 hover:underline text-sm">Delete</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-gray-400 py-6">
+                            No expenses yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-      </div>
-      <div class="bg-white shadow-sm rounded-lg p-5 border">
-        <h3 class="text-sm font-semibold text-green-700">🏷️ Top Categories (₱)</h3>
-        <div class="mt-4 h-48">
-          <canvas id="chartTopBars"></canvas>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Expense Table -->
-  <section class="space-y-4">
-    <div class="flex items-center justify-between">
-      <h3 class="text-lg font-semibold text-gray-800">📄 Expense Records</h3>
-      <span class="hidden text-xs text-gray-400 md:block">Swipe cards on mobile, table on desktop.</span>
-    </div>
-    <div class="space-y-3 md:hidden">
-      {% for expense in expenses %}
-        <article class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
-          <div class="flex items-center justify-between text-xs text-gray-400">
-            <span>{{ expense.date|date:"M j, Y" }}</span>
-            <span>{{ expense.get_expense_type_display }}</span>
-          </div>
-          <p class="mt-2 text-sm font-semibold text-gray-800">₱{{ expense.amount }}</p>
-          <p class="mt-1 text-xs text-gray-600">{{ expense.description|default:"—" }}</p>
-          <div class="mt-3 flex items-center justify-end gap-3 text-xs font-medium">
-            <button type="button"
-                    class="text-blue-600 hover:underline"
-                    onclick="openEditModal('{{ expense.id }}', '{{ expense.expense_type }}', '{{ expense.amount }}', '{{ expense.date }}', '{{ expense.description|escapejs }}')">
-              Edit
-            </button>
-            <form method="post" data-confirm="delete">
-              {% csrf_token %}
-              <input type="hidden" name="delete_expense" value="1">
-              <input type="hidden" name="expense_id" value="{{ expense.id }}">
-              <button type="submit" class="text-red-600 hover:underline">Delete</button>
-            </form>
-          </div>
-        </article>
-      {% empty %}
-        <p class="rounded-lg border border-dashed border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-400">No expenses found for this period.</p>
-      {% endfor %}
-    </div>
-
-    <div class="hidden md:block bg-white shadow-sm rounded-lg p-4 border">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm border-separate border-spacing-y-2">
-          <thead class="text-gray-700 bg-gray-100 rounded">
-            <tr>
-              <th class="px-4 py-2 text-left">📅 Date</th>
-              <th class="px-4 py-2 text-left">📂 Type</th>
-              <th class="px-4 py-2 text-left">📝 Description</th>
-              <th class="px-4 py-2 text-right">💸 Amount</th>
-              <th class="px-4 py-2 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for expense in expenses %}
-              <tr class="bg-gray-50 hover:bg-gray-100 transition">
-                <td class="px-4 py-2">{{ expense.date }}</td>
-                <td class="px-4 py-2 capitalize">{{ expense.get_expense_type_display }}</td>
-                <td class="px-4 py-2 text-gray-600">{{ expense.description|default:"—" }}</td>
-                <td class="px-4 py-2 text-right font-medium">₱{{ expense.amount }}</td>
-                <td class="px-4 py-2 text-right">
-                  <button type="button"
-                          class="text-blue-600 hover:underline text-sm"
-                          onclick="openEditModal('{{ expense.id }}', '{{ expense.expense_type }}', '{{ expense.amount }}', '{{ expense.date }}', '{{ expense.description|escapejs }}')">
-                    Edit
-                  </button>
-                  <form method="post" class="inline-block ml-2" data-confirm="delete">
-                    {% csrf_token %}
-                    <input type="hidden" name="delete_expense" value="1">
-                    <input type="hidden" name="expense_id" value="{{ expense.id }}">
-                    <button type="submit" class="text-red-600 hover:underline text-sm">Delete</button>
-                  </form>
-                </td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="5" class="text-center text-gray-400 py-6">No expenses found for this period.</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      <div class="mt-4 text-right text-lg font-bold text-gray-800">
-        Total: ₱{{ total }}
-      </div>
-    </div>
-  </section>
+    </section>
 
 </div>
 
-<!-- Edit Modal -->
-<div id="editModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
-  <form method="post" class="bg-white p-6 rounded shadow-md w-full max-w-md" data-confirm="edit">
-    {% csrf_token %}
-    <input type="hidden" name="edit_expense" value="1">
-    <input type="hidden" name="expense_id" id="edit-expense-id">
-    <h3 class="text-lg font-semibold mb-4">Edit Expense</h3>
-
-    <label class="block mb-2 text-sm font-medium">Type</label>
-    <select name="expense_type" id="edit-expense-type" class="w-full border p-2 rounded mb-4">
-      {% for key, value in form.fields.expense_type.choices %}
-        <option value="{{ key }}">{{ value }}</option>
-      {% endfor %}
-    </select>
-
-    <label class="block mb-2 text-sm font-medium">Amount</label>
-    <input type="number" name="amount" id="edit-amount" class="w-full border p-2 rounded mb-4" required>
-
-    <label class="block mb-2 text-sm font-medium">Date</label>
-    <input type="date" name="date" id="edit-date" class="w-full border p-2 rounded mb-4" required>
-
-    <label class="block mb-2 text-sm font-medium">Description</label>
-    <textarea name="description" id="edit-description" class="w-full border p-2 rounded mb-4"></textarea>
-
-    <div class="flex justify-end gap-4">
-      <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded border">Cancel</button>
-      <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Update</button>
+<!-- Edit Expense Modal -->
+<div id="editExpenseModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg w-full max-w-lg relative shadow-xl">
+        <button class="absolute top-2 right-3 text-gray-400 hover:text-black text-2xl font-bold" onclick="closeEditExpenseModal()">&times;</button>
+        <h3 class="text-lg font-bold text-green-700 mb-4">✏️ Edit Expense</h3>
+        <form id="editExpenseForm" method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Crop</label>
+                <select name="crop" id="edit_expense_crop" class="w-full border rounded px-3 py-2 text-sm" required></select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Expense Type</label>
+                <select name="expense_type" id="edit_expense_type" class="w-full border rounded px-3 py-2 text-sm" required>
+                    <option value="seed">Seed</option>
+                    <option value="fertilizer">Fertilizer</option>
+                    <option value="labor">Labor</option>
+                    <option value="pesticide">Pesticide</option>
+                    <option value="fuel">Fuel</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                <input type="number" step="0.01" name="amount" id="edit_expense_amount" class="w-full border rounded px-3 py-2 text-sm" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input type="date" name="date" id="edit_expense_date" class="w-full border rounded px-3 py-2 text-sm" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea name="description" id="edit_expense_description" class="w-full border rounded px-3 py-2 text-sm" rows="2"></textarea>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeEditExpenseModal()" class="px-4 py-2 rounded text-sm border">Cancel</button>
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">Save Changes</button>
+            </div>
+        </form>
     </div>
-  </form>
 </div>
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<!-- Delete Expense Modal -->
+<div id="deleteExpenseModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md relative shadow-xl">
+        <button class="absolute top-2 right-3 text-gray-400 hover:text-black text-2xl font-bold" onclick="closeDeleteExpenseModal()">&times;</button>
+        <h3 class="text-lg font-bold text-red-700 mb-2">🗑️ Delete Expense</h3>
+        <p class="text-sm text-gray-600 mb-4">Are you sure you want to delete this expense? This action cannot be undone.</p>
+        <form id="deleteExpenseForm" method="post" class="flex justify-end gap-2">
+            {% csrf_token %}
+            <button type="button" onclick="closeDeleteExpenseModal()" class="px-4 py-2 rounded text-sm border">Cancel</button>
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">Delete</button>
+        </form>
+    </div>
+</div>
+
 <script>
-  // --------- Edit modal ----------
-  function openEditModal(id, type, amount, date, description) {
-    document.getElementById('edit-expense-id').value = id;
-    document.getElementById('edit-expense-type').value = type;
-    document.getElementById('edit-amount').value = amount;
-    document.getElementById('edit-date').value = date;
-    document.getElementById('edit-description').value = description || '';
-    const m = document.getElementById('editModal');
-    m.classList.remove('hidden'); m.classList.add('flex');
-  }
-  function closeEditModal() {
-    const m = document.getElementById('editModal');
-    m.classList.add('hidden'); m.classList.remove('flex');
-  }
-
-  // --------- Carry filters into export links ----------
-  (function syncExportLinks(){
-    const params = new URLSearchParams();
-    const monthSelect = document.getElementById('month');
-    const yearSelect = document.getElementById('year');
-    if (monthSelect && monthSelect.value) {
-      params.set('month', monthSelect.value);
+    // Populate crop options
+    const cropOptions = [
+        {% for crop in form.crop.field.queryset %}
+        {id: {{ crop.id }}, name: "{{ crop.name|escapejs }}"}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    let currentExpenseId = null;
+    
+    function openEditExpenseModal(expenseId) {
+        currentExpenseId = expenseId;
+        // Fetch expense data
+        fetch(`/expenses/${expenseId}/update/`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Populate crop dropdown
+            const cropSelect = document.getElementById('edit_expense_crop');
+            cropSelect.innerHTML = '<option value="">-- Select Crop --</option>';
+            cropOptions.forEach(crop => {
+                const option = document.createElement('option');
+                option.value = crop.id;
+                option.textContent = crop.name;
+                if (data.crop == crop.id) option.selected = true;
+                cropSelect.appendChild(option);
+            });
+            
+            // Populate form fields
+            document.getElementById('edit_expense_type').value = data.expense_type;
+            document.getElementById('edit_expense_amount').value = data.amount;
+            document.getElementById('edit_expense_date').value = data.date;
+            document.getElementById('edit_expense_description').value = data.description || '';
+            
+            document.getElementById('editExpenseForm').action = `/expenses/${expenseId}/update/`;
+            document.getElementById('editExpenseModal').classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading expense data');
+        });
     }
-    if (yearSelect && yearSelect.value) {
-      params.set('year', yearSelect.value);
+    
+    function closeEditExpenseModal() {
+        document.getElementById('editExpenseModal').classList.add('hidden');
+        currentExpenseId = null;
     }
-    const suffix = params.toString() ? ('?' + params.toString()) : '';
-    ['exportCsv', 'exportPdf', 'exportCsvMobile', 'exportPdfMobile'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && !el.dataset.synced) {
-        el.href = el.href + suffix;
-        el.dataset.synced = 'true';
-      }
+    
+    // Handle edit form submission
+    document.getElementById('editExpenseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('X-Requested-With', 'XMLHttpRequest');
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeEditExpenseModal();
+                location.reload(); // Reload to show updated data
+            } else {
+                alert('Error: ' + (data.message || 'Failed to update expense'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating expense');
+        });
     });
-  })();
-
-  // --------- Charts ----------
-  const palette = ['#047857', '#1D4ED8', '#F97316', '#A855F7', '#0EA5E9', '#E11D48'];
-  const fallbackColor = '#CBD5F5';
-
-  function peso(value) {
-    return '₱' + Number(value || 0).toLocaleString();
-  }
-
-  function drawMonthly() {
-    const url = "{% url 'chart_expenses_monthly' %}";
-    fetch(url + window.location.search)
-      .then(r=>r.json())
-      .then(({labels, data})=>{
-        const el = document.getElementById('chartMonthly'); if(!el) return;
-        el.height = 220;
-        new Chart(el, {
-          type:'line',
-          data:{
-            labels,
-            datasets:[{
-              data,
-              label:'Monthly Spend',
-              borderColor:palette[0],
-              backgroundColor:'rgba(4,120,87,0.12)',
-              tension:.35,
-              fill:true,
-              pointRadius:4,
-              pointHoverRadius:6,
-              pointBackgroundColor:palette[0],
-              pointBorderColor:'#fff',
-              pointBorderWidth:1.5
-            }]
-          },
-          options:{
-            maintainAspectRatio:false,
-            plugins:{
-              legend:{ display:true, labels:{ usePointStyle:true } },
-              tooltip:{
-                callbacks:{
-                  label:(ctx)=> `${ctx.dataset.label}: ${peso(ctx.parsed.y)}`
-                }
-              }
-            },
-            scales:{
-              x:{
-                title:{ display:true, text:'Month', font:{ family:'Inter, sans-serif', size:12 } }
-              },
-              y:{
-                beginAtZero:true,
-                title:{ display:true, text:'Amount (₱)', font:{ family:'Inter, sans-serif', size:12 } },
-                ticks:{ callback:(v)=>peso(v) }
-              }
+    
+    function openDeleteExpenseModal(expenseId) {
+        currentExpenseId = expenseId;
+        document.getElementById('deleteExpenseForm').action = `/expenses/${expenseId}/delete/`;
+        document.getElementById('deleteExpenseModal').classList.remove('hidden');
+    }
+    
+    function closeDeleteExpenseModal() {
+        document.getElementById('deleteExpenseModal').classList.add('hidden');
+        currentExpenseId = null;
+    }
+    
+    // Handle delete form submission
+    document.getElementById('deleteExpenseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('X-Requested-With', 'XMLHttpRequest');
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeDeleteExpenseModal();
+                location.reload(); // Reload to show updated data
+            } else {
+                alert('Error: ' + (data.message || 'Failed to delete expense'));
             }
-          }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting expense');
         });
-      });
-  }
-
-  function drawCategory() {
-    fetch("{% url 'chart_expenses_by_category' %}" + window.location.search)
-      .then(r=>r.json())
-      .then(({labels, data})=>{
-        const el = document.getElementById('chartCategory');
-        const legend = document.getElementById('chartCategoryLegend');
-        if(!el || !legend) return;
-        const total = data.reduce((sum, val)=>sum + Number(val||0), 0);
-        if(total === 0){
-          legend.innerHTML = '<li class="text-center text-gray-400">No category data yet</li>';
-        } else {
-          legend.innerHTML = labels.map((label, idx)=>{
-            const value = Number(data[idx] || 0);
-            const pct = total ? ((value / total) * 100).toFixed(1) : '0.0';
-            const color = palette[idx % palette.length];
-            return `<li class="flex items-center justify-between gap-3 rounded border border-gray-100 px-3 py-2">
-              <span class="inline-flex items-center gap-2">
-                <span class="h-2.5 w-2.5 rounded-full" style="background:${color}"></span>
-                ${label}
-              </span>
-              <span class="text-xs text-gray-500">${pct}% · ${peso(value)}</span>
-            </li>`;
-          }).join('');
-        }
-
-        el.height = 240;
-        new Chart(el,{
-          type:'doughnut',
-          data:{
-            labels,
-            datasets:[{
-              data,
-              backgroundColor:labels.map((_, idx)=> palette[idx % palette.length]),
-              borderColor:'#fff',
-              borderWidth:2
-            }]
-          },
-          options:{
-            cutout:'55%',
-            plugins:{
-              legend:{ display:false },
-              tooltip:{
-                callbacks:{
-                  label:(ctx)=> `${ctx.label}: ${peso(ctx.parsed)} (${total ? ((ctx.parsed/total)*100).toFixed(1) : 0}%)`
-                }
-              }
-            }
-          }
-        });
-      });
-  }
-
-  function drawTopBars() {
-    fetch("{% url 'chart_expenses_by_category' %}" + window.location.search)
-      .then(r=>r.json())
-      .then(({labels, data})=>{
-        const el = document.getElementById('chartTopBars'); if(!el) return;
-        const pairs = labels.map((l,i)=>({label:l, value:Number(data[i]||0)}))
-                            .sort((a,b)=>b.value-a.value)
-                            .slice(0,5);
-        el.height = 220;
-        new Chart(el,{
-          type:'bar',
-          data:{
-            labels:pairs.map(p=>p.label),
-            datasets:[{
-              data:pairs.map(p=>p.value),
-              backgroundColor:pairs.map((_, idx)=> palette[idx % palette.length]),
-              borderRadius:6
-            }]
-          },
-          options:{
-            indexAxis:'y',
-            plugins:{
-              legend:{ display:false },
-              tooltip:{ callbacks:{ label:(ctx)=> peso(ctx.parsed.x) } }
-            },
-            scales:{
-              x:{
-                beginAtZero:true,
-                title:{ display:true, text:'Amount (₱)', font:{ family:'Inter, sans-serif', size:12 } },
-                ticks:{ callback:(v)=>peso(v) }
-              },
-              y:{
-                ticks:{ font:{ family:'Inter, sans-serif' } }
-              }
-            }
-          }
-        });
-      });
-  }
-
-  document.addEventListener('DOMContentLoaded', ()=>{
-    drawMonthly();
-    drawCategory();
-    drawTopBars();
-  });
+    });
 </script>
 {% endblock %}

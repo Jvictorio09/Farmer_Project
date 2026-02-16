@@ -62,6 +62,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'myApp.context_processors.harvest_notifications',
             ],
         },
     },
@@ -131,4 +132,4 @@ LOGIN_REDIRECT_URL = 'farmer_dashboard'   # or '/dashboard/'
 LOGOUT_REDIRECT_URL = 'login'
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'AgriTrack Support <support@agritrack.local>')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Agriplus Support <support@Agriplus.local>')

@@ -1,6 +1,6 @@
 {% extends 'auth/base.html' %}
 {% load static %}
-{% block title %}Register | AgriTrack{% endblock %}
+{% block title %}Register | Agriplus{% endblock %}
 {% load form_tags %}
 
 {% block content %}
@@ -8,7 +8,7 @@
   <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg">
     <div class="text-center mb-6">
       <h2 class="text-3xl font-extrabold text-green-700">Create Your Farmer Account 🧑‍🌾</h2>
-      <p class="text-gray-600 text-sm mt-1">Join AgriTrack and grow with confidence.</p>
+      <p class="text-gray-600 text-sm mt-1">Join Agriplus and grow with confidence.</p>
     </div>
     <form method="POST" class="space-y-5">
       {% csrf_token %}

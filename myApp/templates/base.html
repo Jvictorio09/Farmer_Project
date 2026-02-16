@@ -83,7 +83,7 @@
           const confirmType = form?.dataset?.confirm;
           if (!confirmType) return;
 
-          const copy = window.AgriTrackConfirmCopy?.[confirmType];
+          const copy = window.AgriplusConfirmCopy?.[confirmType];
           if (!copy) return;
 
           evt.preventDefault();
@@ -121,6 +121,24 @@
           });
         });
       })();
+
+      // Notification bell dropdown functionality
+      function toggleNotificationDropdown() {
+        const dropdown = document.getElementById('notification-dropdown');
+        if (dropdown) {
+          dropdown.classList.toggle('hidden');
+        }
+      }
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(event) {
+        const bell = document.getElementById('notification-bell');
+        const dropdown = document.getElementById('notification-dropdown');
+        
+        if (dropdown && bell && !bell.contains(event.target) && !dropdown.contains(event.target)) {
+          dropdown.classList.add('hidden');
+        }
+      });
     </script>
   </body>
 </html>

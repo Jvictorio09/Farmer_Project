@@ -1,466 +1,454 @@
-{% extends 'base.html' %}
-{% block title %}Dashboard | AgriTrack{% endblock %}
+{% extends 'base.html' %} {% block title %}Dashboard | Agriplus{% endblock %} {% block content %}
 
-{% block content %}
-<div class="bg-green-50 min-h-screen py-4 sm:py-6">
-  <div class="mx-auto w-full max-w-5xl space-y-6 sm:space-y-8 px-4 sm:px-0">
+<div class="bg-green-50 min-h-screen py-6">
+    <div class="mx-auto max-w-5xl space-y-8 px-4">
 
-    <!-- 👋 Welcome -->
-    <section class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div>
-        <h2 class="text-2xl font-bold text-green-800">Hi! {{ user.first_name|default:user.username }} 👋</h2>
-        <p class="text-sm text-gray-500 mt-1">Let’s keep the farm on track today.</p>
-      </div>
-      <span class="text-sm font-medium text-gray-500">{% now "l, F j, Y" %}</span>
-    </section>
-
-    <!-- 🔔 Reminders -->
-    <section class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6">
-      <div class="flex items-center justify-between gap-3">
-        <h3 class="text-lg font-semibold text-green-700">🔔 Reminders</h3>
-        <button onclick="openAddReminderModal()" class="hidden sm:inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-green-700">
-          + Add Reminder
-        </button>
-      </div>
-      <p class="mt-1 text-xs text-gray-500 sm:hidden">Tap a reminder to edit. Use the menu ⋮ for more actions.</p>
-      <div class="mt-4 rounded-lg border border-gray-100">
-        <div id="reminderList"
-             class="divide-y divide-gray-100 text-sm"
-             hx-get="{% url 'refresh_reminders' %}"
-             hx-trigger="load, reminder-updated from:body"
-             hx-target="#reminderList"
-             hx-swap="innerHTML">
-          <p class="p-4 text-gray-400">Loading reminders...</p>
-        </div>
-      </div>
-      <div class="mt-4 sm:hidden">
-        <button onclick="openAddReminderModal()" class="w-full rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
-          + Add Reminder
-        </button>
-      </div>
-    </section>
-
-    <!-- 🌾 Upcoming Harvests -->
-    <section class="space-y-4" id="upcoming-harvests">
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div class="bg-white rounded-xl shadow px-4 py-4 sm:px-6 sm:py-5">
-          <h3 class="text-lg font-semibold text-green-700 mb-2">📈 Next Harvest Forecast</h3>
-          {% if forecasts %}
-            {% with next=forecasts.0 %}
-              <p class="text-2xl font-bold text-green-800">~{{ next.expected_yield_kg|floatformat:0 }} kg</p>
-              <p class="text-sm text-gray-500">
-                Window:
-                {% if next.harvest_start %}{{ next.harvest_start|date:"M j" }}{% else %}?{% endif %} –
-                {% if next.harvest_end %}{{ next.harvest_end|date:"M j" }}{% else %}?{% endif %}
-              </p>
-              <p class="mt-2 text-xs text-gray-400">
-                Season {{ next.season_factor|floatformat:2 }} • Inputs {{ next.input_factor|floatformat:2 }} • Pop {{ next.population_factor|floatformat:2 }}
-              </p>
-            {% endwith %}
-          {% else %}
-            <p class="text-sm text-gray-500">No forecast data available yet. Log a planting activity to generate one.</p>
-          {% endif %}
-        </div>
-        <div class="bg-white rounded-xl shadow px-4 py-4 sm:px-6 sm:py-5">
-          <h3 class="text-lg font-semibold text-green-700 mb-2">🌱 Crops Planted This Month</h3>
-          <p class="text-3xl font-bold text-green-800">{{ crop_count }}</p>
-          <p class="text-sm text-gray-500 mt-1">Keep logging activities to stay accurate.</p>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl shadow px-4 py-4 sm:px-6 sm:py-5">
-        <div class="flex items-center justify-between gap-3">
-          <h3 class="text-lg font-semibold text-green-700">🌾 Coming Harvests</h3>
-          <div class="hidden text-xs sm:flex items-center gap-2 text-gray-400">
-            <span>Swipe on mobile or scroll to review each crop.</span>
-            <a href="#upcoming-harvests" class="text-green-600 hover:underline">View all</a>
-          </div>
-        </div>
-        <div class="mt-3 overflow-hidden">
-          <div id="harvestRail" class="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto md:overflow-visible scroll-smooth pb-2 snap-x snap-mandatory">
-            <p class="text-sm text-gray-400">Loading harvest timeline…</p>
-          </div>
-          <div class="mt-2 flex justify-center gap-1 text-xs text-gray-400 sm:hidden" id="harvestPagination"></div>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6">
-        <div class="flex items-center justify-between gap-3 mb-4">
-          <h3 class="text-lg font-semibold text-green-700">🧮 Forecast Snapshots</h3>
-          <a href="{% url 'activity_log' %}#forecast" class="text-xs font-medium text-green-600 hover:underline">View planting details</a>
-        </div>
-        {% if forecasts %}
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {% for f in forecasts|slice:":3" %}
-              <article class="rounded-lg border border-gray-100 p-4">
-                <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <p class="text-sm font-medium text-gray-700">{{ f.crop.name }}</p>
-                    <p class="text-xs text-gray-400">Updated {{ f.created_at|date:"M j" }}</p>
-                  </div>
-                  <span class="text-[11px] px-2 py-0.5 rounded-full 
-                    {% if f.season_factor >= 1 %}bg-green-100 text-green-700
-                    {% elif f.season_factor >= 0.9 %}bg-yellow-100 text-yellow-700
-                    {% else %}bg-red-100 text-red-700{% endif %}">
-                    {% if f.season_factor >= 1 %}In-season{% elif f.season_factor >= 0.9 %}Shoulder{% else %}Off-season{% endif %}
-                  </span>
-                </div>
-                <p class="mt-3 text-xl font-bold text-green-800">{{ f.expected_yield_kg|floatformat:0 }} kg</p>
-                <p class="text-xs text-gray-500">Range: {{ f.yield_min_kg|floatformat:0 }}–{{ f.yield_max_kg|floatformat:0 }} kg</p>
-                <p class="mt-1 text-xs text-gray-500">
-                  Harvest:
-                  {% if f.harvest_start %}{{ f.harvest_start|date:"M j" }}{% else %}?{% endif %} –
-                  {% if f.harvest_end %}{{ f.harvest_end|date:"M j" }}{% else %}?{% endif %}
+        <!-- ========================= -->
+        <!-- 1️⃣ WELCOME / DATE -->
+        <!-- ========================= -->
+        <section class="bg-white rounded-xl shadow px-6 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-2xl font-bold text-green-800">
+                    Hi {{ user.first_name|default:user.username }} 👋
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">
+                    Let’s keep the farm on track today.
                 </p>
-                <details class="mt-2 text-xs text-gray-600">
-                  <summary class="cursor-pointer select-none text-gray-500">Why this estimate?</summary>
-                  <p class="mt-1 leading-relaxed text-gray-500">{{ f.notes }}</p>
-                </details>
-            {% if f.planting_activity_id %}
-              <div class="mt-3 text-right">
-                <a href="{% url 'planting_detail' f.planting_activity_id %}" class="text-xs font-medium text-green-600 hover:underline">View planting detail →</a>
-              </div>
+            </div>
+            <span class="text-sm font-medium text-gray-500">
+                {% now "l, F j, Y" %}
+            </span>
+        </section>
+
+        <!-- ========================= -->
+        <!-- 2️⃣ REMINDERS + NEXT HARVEST -->
+        <!-- ========================= -->
+        <section class="grid gap-4 sm:grid-cols-2">
+
+            <!-- REMINDERS -->
+            <div class="bg-white rounded-xl shadow px-5 py-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-green-700">🔔 Reminders</h3>
+                </div>
+
+                <form method="post" action="{% url 'add_reminder' %}" class="grid grid-cols-1 sm:grid-cols-[3fr_2fr_auto] gap-3">
+                    {% csrf_token %}
+                    <input type="text" name="message" placeholder="e.g. Apply fertilizer" class="border rounded px-3 py-2 text-sm sm:col-span-2" required>
+                    <input type="date" name="due_date" class="border rounded px-3 py-2 text-sm w-full" required>
+                    <button type="submit" class="bg-green-600 text-white rounded px-4 py-2 text-sm hover:bg-green-700">
+                        ➕ Add
+                    </button>
+                </form>
+
+                {% include 'partials/reminder_list.html' with reminders=reminders %}
+            </div>
+
+            <!-- NEXT HARVEST -->
+            <div class="bg-white rounded-xl shadow px-5 py-5">
+                <h3 class="text-lg font-semibold text-green-700 mb-2">🌾 Next Harvest</h3>
+                {% if forecasts %} {% with next=forecasts.0 %}
+                <p class="text-2xl font-bold text-green-800">
+                    ~{{ next.expected_yield_kg|floatformat:0 }} kg
+                </p>
+                <p class="text-sm text-gray-500">
+                    {{ next.crop.name }} • {{ next.harvest_start|date:"M j" }} – {{ next.harvest_end|date:"M j" }}
+                </p>
+                {% endwith %} {% else %}
+                <p class="text-sm text-gray-400">No forecast yet.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- QUICK ACTIONS -->
+        <section class="bg-white rounded-xl shadow px-6 py-5">
+            <h3 class="text-lg font-semibold text-green-700 mb-3">⚡ Quick Actions</h3>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a href="{% url 'activity_log' %}" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-semibold text-center hover:bg-green-700">
+                    ✅ Log Activity
+                </a>
+                <a href="{% url 'expense_log' %}" class="border px-4 py-2 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 text-center">
+                    💸 Add Expense
+                </a>
+            </div>
+        </section>
+
+        <!-- MINI CHARTS -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white rounded-xl shadow px-5 py-5">
+                <h4 class="text-sm font-semibold text-green-700 mb-2">
+                    📊 Activity Trend
+                </h4>
+                <canvas id="miniActivityChart"></canvas>
+            </div>
+
+            <div class="bg-white rounded-xl shadow px-5 py-5">
+                <h4 class="text-sm font-semibold text-green-700 mb-2">
+                    💸 Expense Breakdown
+                </h4>
+                <canvas id="miniExpenseChart"></canvas>
+            </div>
+        </section>
+
+        <!-- FORECAST SNAPSHOT -->
+        <section class="space-y-6">
+
+            <div class="bg-white rounded-xl shadow px-6 py-6">
+                <h3 class="text-lg font-semibold text-green-700 mb-4">
+                    📈 Forecast Snapshot
+                </h3>
+
+                {% if forecasts %}
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {% for f in forecasts %}
+                    <div class="border rounded-lg p-4">
+                        <p class="text-sm font-semibold text-gray-800">
+                            {{ f.crop.name }}
+                        </p>
+                        <p class="text-xl font-bold text-green-800 mt-2">
+                            {{ f.expected_yield_kg|floatformat:0 }} kg
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            {{ f.harvest_start|date:"M j" }} – {{ f.harvest_end|date:"M j" }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400">No forecast data yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- CROP COST -->
+            <div class="bg-white rounded-xl shadow px-6 py-6">
+                <h3 class="text-lg font-semibold text-green-700 mb-4">
+                    💰 Crop Cost Efficiency
+                </h3>
+
+                {% if crop_efficiency %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-green-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left">Crop</th>
+                                <th class="px-4 py-2 text-right">Total Expense</th>
+                                <th class="px-4 py-2 text-right">Harvest (kg)</th>
+                                <th class="px-4 py-2 text-right">Cost per kg</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for crop, data in crop_efficiency.items %}
+                            <tr class="border-t">
+                                <td class="px-4 py-2">{{ crop }}</td>
+                                <td class="px-4 py-2 text-right">₱{{ data.total_expense|floatformat:2 }}</td>
+                                <td class="px-4 py-2 text-right">{{ data.harvest_kg|floatformat:0 }}</td>
+                                <td class="px-4 py-2 text-right text-green-700 font-semibold">
+                                    ₱{{ data.cost_per_kg|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400">No crop data yet.</p>
+                {% endif %}
+            </div>
+
+        </section>
+
+        <!-- RECENT ACTIVITIES -->
+        <section class="bg-white rounded-xl shadow px-6 py-6">
+            <h3 class="text-lg font-semibold text-green-700 mb-3">
+                📋 Recent Activities
+            </h3>
+
+            {% if recent_activities %}
+            <ul class="divide-y text-sm">
+                {% for a in recent_activities %}
+                <li class="py-3 flex justify-between">
+                    <span>{{ a.crop.name }} • {{ a.activity_type|title }}</span>
+                    <span class="text-xs text-gray-500">{{ a.date|date:"M j" }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-sm text-gray-400">No recent activities.</p>
             {% endif %}
-              </article>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="text-sm text-gray-500">No forecasts yet. Log a planting activity to auto-generate one.</p>
-        {% endif %}
-      </div>
-    </section>
+        </section>
 
-    <!-- ⚡ Quick Actions -->
-    <section class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6">
-      <h3 class="text-lg font-semibold text-green-700">⚡ Quick Actions</h3>
-      <p class="mt-1 text-xs text-gray-500">Focus on what matters. Primary action stays visible; other tools are tucked away on mobile.</p>
-      <div class="mt-4 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
-        <a href="{% url 'activity_log' %}"
-           class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-green-700 sm:w-auto">
-          ✅ Log Activity
-        </a>
-        <details class="sm:hidden rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-          <summary class="flex cursor-pointer list-none items-center justify-between">
-            More tools
-            <span class="text-xs text-gray-400">⋮</span>
-          </summary>
-          <div class="mt-2 space-y-2">
-            <a href="{% url 'expense_log' %}" class="block rounded border border-gray-200 px-3 py-2 text-gray-700 hover:bg-white">💸 Add Expense</a>
-            <button type="button" onclick="openAddReminderModal()" class="block w-full rounded border border-gray-200 px-3 py-2 text-left text-gray-700 hover:bg-white">🔔 Add Reminder</button>
-          </div>
-        </details>
-        <div class="hidden sm:flex gap-2">
-          <a href="{% url 'expense_log' %}" class="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">💸 Add Expense</a>
-          <button type="button" onclick="openAddReminderModal()" class="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">🔔 Add Reminder</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 📊 Charts & Metrics -->
-    <section class="space-y-4" id="charts">
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="bg-white rounded-xl shadow px-4 py-4">
-          <h3 class="text-sm font-semibold text-green-700">💸 Expenses ({{ current_month }})</h3>
-          <p class="mt-2 text-2xl font-bold text-green-800">₱{{ total_expenses }}</p>
-          <p class="text-xs text-gray-500 mt-1">Across all categories</p>
-        </div>
-        <div class="bg-white rounded-xl shadow px-4 py-4">
-          <h3 class="text-sm font-semibold text-green-700">📌 This Month</h3>
-          <ul class="mt-2 space-y-1 text-xs text-gray-600">
-            <li class="flex justify-between"><span>Total Spend</span><span class="font-semibold text-gray-900">₱{{ total_expenses }}</span></li>
-            <li class="flex justify-between"><span>Most Common Expense</span><span class="font-semibold text-gray-900">{{ most_common_expense_label }}</span></li>
-            <li class="flex justify-between"><span>Last Recorded</span>
-              {% if last_recorded_date %}
-                <span class="font-semibold text-gray-900">{{ last_recorded_date|date:"M j" }}</span>
-              {% else %}
-                <span class="text-gray-400">—</span>
-              {% endif %}
-            </li>
-          </ul>
-        </div>
-        <div class="bg-white rounded-xl shadow px-4 py-4">
-          <h3 class="text-sm font-semibold text-green-700">📌 Notes</h3>
-          <p class="mt-2 text-xs leading-relaxed text-gray-600">
-            Track expenses and activities regularly so forecasts stay accurate. Charts below show where the money went and how the season is trending.
-          </p>
-        </div>
-      </div>
-
-      <div class="grid gap-4 md:grid-cols-2">
-        <div class="bg-white rounded-xl shadow px-4 py-5">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-green-700">💵 Monthly Expenses — {{ current_month }}</h3>
-            <span class="text-[11px] text-gray-400">Tap a point to see exact amount</span>
-          </div>
-          <div class="mt-3 h-40">
-            <canvas id="miniLine"></canvas>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl shadow px-4 py-5">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-green-700">🥧 Expenses by Category</h3>
-            <span class="text-[11px] text-gray-400">Top categories</span>
-          </div>
-          <div class="mt-3 space-y-3">
-            <div class="flex justify-center">
-              <canvas id="miniDonut" class="h-36 w-36"></canvas>
-            </div>
-            <div class="rounded-lg border border-gray-100 bg-gray-50 px-3 py-3">
-              <ul id="miniDonutLegend" class="space-y-2 text-xs text-gray-600"></ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 📋 Recent Activities -->
-    <section class="bg-white rounded-xl shadow px-4 py-5 sm:px-6 sm:py-6">
-      <div class="flex items-center justify-between gap-3">
-        <h3 class="text-lg font-semibold text-green-700">📋 Recent Activities</h3>
-        <a href="{% url 'activity_log' %}" class="text-xs font-medium text-green-600 hover:underline">View all</a>
-      </div>
-      {% if recent_activities %}
-        <ul class="mt-4 divide-y divide-gray-100 text-sm">
-          {% for activity in recent_activities %}
-            <li class="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <span class="font-medium text-gray-800">{{ activity.crop.name }}</span>
-                <span class="text-gray-400">• {{ activity.activity_type|title }}</span>
-              </div>
-              <span class="text-xs text-gray-500">{{ activity.date|date:"M j, Y" }}</span>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="mt-4 text-sm text-gray-500">No recent activities yet.</p>
-      {% endif %}
-    </section>
-
-  </div>
+    </div>
 </div>
 
-<!-- Add/Edit Reminder Modal -->
-<div id="reminderModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-  <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
-    <h2 class="text-xl font-bold text-green-700 mb-4" id="reminderModalTitle">Add Reminder</h2>
-    <form id="reminderForm" method="POST" action="{% url 'add_reminder' %}">
-      {% csrf_token %}
-      <input type="hidden" name="reminder_id" id="reminderId" />
-      <div class="mb-4">
-        <label class="block text-sm mb-1">Message</label>
-        <input type="text" name="message" id="reminderMessage" class="w-full border px-3 py-2 rounded" required />
-      </div>
-      <div class="mb-4">
-        <label class="block text-sm mb-1">Due Date</label>
-        <input type="date" name="due_date" id="reminderDate" class="w-full border px-3 py-2 rounded" required />
-      </div>
-      <div class="flex justify-end space-x-2">
-        <button type="button" onclick="closeReminderModal()" class="px-4 py-2 text-gray-600 hover:underline">Cancel</button>
-        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Save</button>
-      </div>
-    </form>
-  </div>
-</div>
+<!-- ========================= -->
+<!-- CHARTS SCRIPT -->
+<!-- ========================= -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- Delete Confirmation Modal -->
-<div id="deleteReminderModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-  <div class="bg-white w-full max-w-sm rounded-lg shadow-lg p-6 text-center">
-    <p class="text-lg mb-4" id="deleteReminderMessageCopy">Delete this record? This can’t be undone.</p>
-    <form id="deleteReminderForm" method="POST" action="{% url 'delete_reminder' %}">
-      {% csrf_token %}
-      <input type="hidden" name="reminder_id" id="deleteReminderId" />
-      <div class="flex justify-center space-x-4">
-        <button type="button" id="deleteReminderCancel" onclick="closeDeleteModal()" class="px-4 py-2 text-gray-600 hover:underline">Cancel</button>
-        <button type="submit" id="deleteReminderConfirm" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
-      </div>
-    </form>
-  </div>
-</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
 
-<!-- Chart.js CDN -->
+        // Activity Trend
+        fetch("{% url 'chart_activities_monthly' %}")
+            .then(res => res.json())
+            .then(data => {
+                new Chart(document.getElementById("miniActivityChart"), {
+                    type: "line",
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.data,
+                            borderColor: "#16a34a",
+                            backgroundColor: "rgba(22,163,74,0.2)",
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            });
+
+        // Expense Breakdown
+        const expenseLabels = [{ %
+                for crop,
+                data in crop_efficiency.items %
+            }
+            "{{ crop }}", { % endfor %
+            }
+        ];
+
+        const expenseData = [{ %
+            for crop,
+            data in crop_efficiency.items %
+        } {
+            {
+                data.total_expense
+            }
+        }, { % endfor %
+        }];
+
+        if (expenseLabels.length > 0) {
+            new Chart(document.getElementById("miniExpenseChart"), {
+                type: "doughnut",
+                data: {
+                    labels: expenseLabels,
+                    datasets: [{
+                        data: expenseData,
+                        backgroundColor: ["#16a34a", "#22c55e", "#4ade80", "#86efac"]
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            position: "bottom"
+                        }
+                    }
+                }
+            });
+        }
+
+    });
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 
-<!-- Compact Insights JS -->
 <script>
-(function(){
-  const green = { light:'rgba(16,185,129,.18)', mid:'rgba(16,185,129,.55)', solid:'#10B981' };
-  const peso = v => '₱' + Number(v||0).toLocaleString();
-  const kg   = v => (Number(v||0).toLocaleString() + ' kg');
+    document.addEventListener("DOMContentLoaded", function() {
 
-  const compactOpts = {
-    responsive:true, maintainAspectRatio:false,
-    plugins:{
-      legend:{ display:false },
-      tooltip:{ backgroundColor:'rgba(17,24,39,.9)', padding:8,
-        callbacks:{ label:(c)=> {
-          const ds = (c.dataset?.label||'').toLowerCase();
-          const val = c.parsed?.y ?? c.parsed;
-          if(ds.includes('₱')) return peso(val);
-          if(ds.includes('kg')) return kg(val);
-          return val;
-        }}
-      }
-    },
-    scales:{ x:{ display:false }, y:{ display:false } }
-  };
+        // =========================
+        // 📊 Activity Trend Chart
+        // =========================
+        fetch("{% url 'chart_activities_monthly' %}")
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('miniActivityChart');
+                if (!ctx) return;
 
-  const drawNoData = (canvas, text='No expense data yet') => {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(text, 10, 18);
-  };
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.data,
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22,163,74,0.15)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            });
 
-  const init = () => {
-    // A) Sparkline
-    fetch("{% url 'chart_expenses_monthly' %}")
-      .then(r=>r.json())
-      .then(({labels, data})=>{
-        const el = document.getElementById('miniLine');
-        if(!el) return;
-        el.height = 160;
+        // =========================
+        // 💸 Expense Breakdown Chart
+        // =========================
+        fetch("{% url 'chart_expenses_by_crop' %}")
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('miniExpenseChart');
+                if (!ctx) return;
 
-        if(!data || data.every(v => Number(v) === 0)){
-          drawNoData(el);
-          return;
-        }
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            data: data.data,
+                            backgroundColor: [
+                                '#16a34a',
+                                '#22c55e',
+                                '#86efac',
+                                '#15803d',
+                                '#4ade80'
+                            ]
+                        }]
+                    },
+                    options: {
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            });
 
-        new Chart(el, {
-          type:'line',
-          data:{ labels, datasets:[{
-            label:'₱ per month', data,
-            tension:.35, borderColor:green.solid, backgroundColor:green.light, fill:true, pointRadius:0
-          }]},
-          options: compactOpts
-        });
-      }).catch(()=> {
-        const el = document.getElementById('miniLine');
-        if(el){ el.height = 110; drawNoData(el, 'Unable to load data'); }
-      });
-
-    // B) Mini donut
-    fetch("{% url 'chart_expenses_by_category' %}")
-      .then(r=>r.json())
-      .then(({labels, data})=>{
-        const el = document.getElementById('miniDonut');
-        if(!el) return;
-        el.height = 160;
-
-        const hasData = data && data.some(v => Number(v) > 0);
-        if(!hasData){
-          const legend = document.getElementById('miniDonutLegend');
-          legend.innerHTML = '<li class="text-gray-500">No category data yet</li>';
-          return;
-        }
-
-        const colors = [green.light, 'rgba(16,185,129,.35)', green.mid, green.solid, '#E5E7EB'];
-        new Chart(el, {
-          type:'doughnut',
-          data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:0, cutout:'68%' }]},
-          options:{ ...compactOpts, plugins:{ ...compactOpts.plugins, legend:{display:false} } }
-        });
-        const list = document.getElementById('miniDonutLegend');
-        list.innerHTML = labels.slice(0,4).map((lbl,i)=> `
-          <li class="flex items-center gap-2">
-            <span class="inline-block w-2.5 h-2.5 rounded" style="background:${colors[i%colors.length]}"></span>
-            <span>${lbl}</span>
-            <span class="ml-auto text-gray-600">${peso(data[i]||0)}</span>
-          </li>
-        `).join('');
-      });
-
-    // C) Harvest rail
-    Promise.all([
-      fetch("{% url 'chart_harvest_timeline' %}").then(r=>r.json()),
-      fetch("{% url 'chart_yield_by_crop' %}").then(r=>r.json())
-    ]).then(([tline, yld])=>{
-      const rail = document.getElementById('harvestRail');
-      if(!rail || !tline.labels?.length) return;
-      const ymap = {}; (yld.labels||[]).forEach((n,i)=> ymap[n]=yld.data[i]);
-
-      const today = new Date(); today.setHours(0,0,0,0);
-      const addDays = (d, n)=> { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
-      const fmt = d => d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
-
-      const pagination = document.getElementById('harvestPagination');
-      rail.innerHTML = tline.labels.map((name, i)=>{
-        const start = addDays(today, tline.offsets[i]||0);
-        const end   = addDays(start, Math.max(0, tline.windows[i]||0));
-        const kgs   = kg(ymap[name]||0);
-        return `<div class="min-w-[220px] snap-start rounded-lg border border-gray-200 bg-white px-3 py-3 text-xs shadow-sm">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-400">
-            <span>${name}</span>
-            <span>${fmt(start)} – ${fmt(end)}</span>
-          </div>
-          <p class="mt-2 text-sm font-semibold text-gray-800">${kgs}</p>
-        </div>`;
-      }).join('');
-      rail.classList.add('snap-x', 'snap-mandatory');
-      if (pagination) {
-        pagination.innerHTML = tline.labels.map((_, i)=> `<span class="h-1.5 w-1.5 rounded-full bg-gray-300"></span>`).join('');
-        const dots = pagination.querySelectorAll('span');
-        const highlight = (index) => {
-          dots.forEach((dot, idx) => {
-            dot.classList.toggle('bg-green-500', idx === index);
-            dot.classList.toggle('bg-gray-300', idx !== index);
-          });
-        };
-        if (dots.length) highlight(0);
-        const card = rail.firstElementChild;
-        if (card) {
-          const cardWidth = card.getBoundingClientRect().width + 12; // include gap
-          rail.addEventListener('scroll', () => {
-            const index = Math.round(rail.scrollLeft / cardWidth);
-            highlight(Math.max(0, Math.min(dots.length - 1, index)));
-          });
-        }
-      }
     });
-  };
-
-  const target = document.getElementById('charts');
-  if('IntersectionObserver' in window && target){
-    const io = new IntersectionObserver((entries)=>{
-      if(entries.some(e=>e.isIntersecting)){ init(); io.disconnect(); }
-    }, {threshold:.2});
-    io.observe(target);
-  } else { init(); }
-})();
 </script>
 
-<!-- Reminders: modal controls -->
+<!-- Edit Reminder Modal -->
+<div id="editReminderModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md relative shadow-xl">
+        <button class="absolute top-2 right-3 text-gray-400 hover:text-black text-2xl font-bold" onclick="closeEditReminderModal()">&times;</button>
+        <h3 class="text-lg font-bold text-green-700 mb-4">✏️ Edit Reminder</h3>
+        <form id="editReminderForm" method="post" action="{% url 'update_reminder' %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="reminder_id" id="edit_reminder_id">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                <input type="text" name="message" id="edit_reminder_message" class="w-full border rounded px-3 py-2 text-sm" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <input type="date" name="due_date" id="edit_reminder_due_date" class="w-full border rounded px-3 py-2 text-sm" required>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeEditReminderModal()" class="px-4 py-2 rounded text-sm border">Cancel</button>
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Reminder Modal -->
+<div id="deleteReminderModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md relative shadow-xl">
+        <button class="absolute top-2 right-3 text-gray-400 hover:text-black text-2xl font-bold" onclick="closeDeleteReminderModal()">&times;</button>
+        <h3 class="text-lg font-bold text-red-700 mb-2">🗑️ Delete Reminder</h3>
+        <p class="text-sm text-gray-600 mb-4">Are you sure you want to delete this reminder? This action cannot be undone.</p>
+        <form id="deleteReminderForm" method="post" action="{% url 'delete_reminder' %}" class="flex justify-end gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="reminder_id" id="delete_reminder_id">
+            <button type="button" onclick="closeDeleteReminderModal()" class="px-4 py-2 rounded text-sm border">Cancel</button>
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">Delete</button>
+        </form>
+    </div>
+</div>
+
 <script>
-  function openAddReminderModal() {
-    document.getElementById("reminderForm").action = "{% url 'add_reminder' %}";
-    document.getElementById("reminderForm").removeAttribute("data-confirm");
-    document.getElementById("reminderId").value = "";
-    document.getElementById("reminderMessage").value = "";
-    document.getElementById("reminderDate").value = "";
-    document.getElementById("reminderModalTitle").innerText = "Add Reminder";
-    document.getElementById("reminderModal").classList.remove("hidden");
-  }
-  function openEditReminderModal(id, message, date) {
-    document.getElementById("reminderForm").action = "{% url 'edit_reminder' %}";
-    document.getElementById("reminderForm").setAttribute("data-confirm", "edit");
-    document.getElementById("reminderId").value = id;
-    document.getElementById("reminderMessage").value = message;
-    document.getElementById("reminderDate").value = date;
-    document.getElementById("reminderModalTitle").innerText = "Edit Reminder";
-    document.getElementById("reminderModal").classList.remove("hidden");
-  }
-  function closeReminderModal() { document.getElementById("reminderModal").classList.add("hidden"); }
-  function openDeleteReminderModal(id) {
-    document.getElementById("deleteReminderId").value = id;
-    const copy = window.AgriTrackConfirmCopy?.delete;
-    if (copy) {
-      document.getElementById("deleteReminderMessageCopy").textContent = copy.body;
-      document.getElementById('deleteReminderConfirm').textContent = copy.confirm || 'Delete';
-      document.getElementById('deleteReminderCancel').textContent = copy.cancel || 'Cancel';
+    function openEditReminderModal(reminderId, message, dueDate) {
+        document.getElementById('edit_reminder_id').value = reminderId;
+        document.getElementById('edit_reminder_message').value = message;
+        document.getElementById('edit_reminder_due_date').value = dueDate;
+        document.getElementById('editReminderModal').classList.remove('hidden');
     }
-    document.getElementById("deleteReminderModal").classList.remove("hidden");
-  }
-  function closeDeleteModal() { document.getElementById("deleteReminderModal").classList.add("hidden"); }
-
+    
+    function closeEditReminderModal() {
+        document.getElementById('editReminderModal').classList.add('hidden');
+    }
+    
+    document.getElementById('editReminderForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('X-Requested-With', 'XMLHttpRequest');
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeEditReminderModal();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Failed to update reminder'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating reminder');
+        });
+    });
+    
+    function openDeleteReminderModal(reminderId) {
+        document.getElementById('delete_reminder_id').value = reminderId;
+        document.getElementById('deleteReminderModal').classList.remove('hidden');
+    }
+    
+    function closeDeleteReminderModal() {
+        document.getElementById('deleteReminderModal').classList.add('hidden');
+    }
+    
+    document.getElementById('deleteReminderForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('X-Requested-With', 'XMLHttpRequest');
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeDeleteReminderModal();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Failed to delete reminder'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting reminder');
+        });
+    });
 </script>
+
 {% endblock %}
