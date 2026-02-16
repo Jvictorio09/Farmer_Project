@@ -54,6 +54,27 @@
     </div>
     
     <script>
+    // Toggle crop recommendations dropdown
+    function toggleCropRecommendations() {
+      const content = document.getElementById('cropRecContent');
+      const toggle = document.getElementById('cropRecToggle');
+      const icon = document.getElementById('cropRecIcon');
+      
+      if (content && toggle && icon) {
+        const isHidden = content.classList.contains('hidden');
+        
+        if (isHidden) {
+          content.classList.remove('hidden');
+          toggle.setAttribute('aria-expanded', 'true');
+          icon.style.transform = 'rotate(180deg)';
+        } else {
+          content.classList.add('hidden');
+          toggle.setAttribute('aria-expanded', 'false');
+          icon.style.transform = 'rotate(0deg)';
+        }
+      }
+    }
+    
       lucide.createIcons(); // auto-replace <i data-lucide="">
 
       (function () {

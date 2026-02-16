@@ -9,7 +9,11 @@
         Activities
       </a>
 
-            <a href="{% url 'expense_log' %}" class="hover:underline">Expenses</a>
+            <a href="{% url 'expense_log' %}" class="hover:underline {% if request.path == '/expenses/' %}underline font-bold{% endif %}">Expenses</a>
+            
+            <a href="{% url 'reports' %}" class="hover:underline {% if request.path == '/reports/' %}underline font-bold{% endif %}">Reports</a>
+            
+            <a href="{% url 'crop_reference_guide' %}" class="hover:underline {% if request.path == '/crop-reference/' %}underline font-bold{% endif %}">Crop Guide</a>
             
             {% if has_upcoming_harvests %}
             <!-- Notification Bell -->

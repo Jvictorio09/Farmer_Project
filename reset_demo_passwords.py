@@ -12,7 +12,7 @@ django.setup()
 
 from myApp.models import User
 
-DEMO_USERS = ["admin", "tech_ana", "farmer_ben", "farmer_rosa"]
+DEMO_USERS = ["admin", "tech_ana", "farmer_ben", "farmer_rosa", "farmer_carlos"]
 PASSWORD = "demo12345"
 
 print("Resetting passwords for demo users...")

@@ -69,8 +69,185 @@
                 <a href="{% url 'expense_log' %}" class="border px-4 py-2 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 text-center">
                     💸 Add Expense
                 </a>
+                <a href="{% url 'reports' %}" class="border px-4 py-2 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 text-center">
+                    📊 Generate Reports
+                </a>
+                <a href="{% url 'crop_reference_guide' %}" class="border px-4 py-2 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 text-center">
+                    📚 Crop Reference Guide
+                </a>
             </div>
         </section>
+
+        <!-- CROP RECOMMENDATIONS WITH STATISTICS -->
+        {% if recommended_crops %}
+        <section class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+            <!-- Collapsible Header -->
+            <button 
+                type="button"
+                onclick="toggleCropRecommendations()"
+                class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                aria-expanded="false"
+                id="cropRecToggle"
+            >
+                <div class="flex items-center gap-3">
+                    <div class="flex-shrink-0">
+                        <svg id="cropRecIcon" class="w-5 h-5 text-green-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">🌾 Available Crops & Statistics</h3>
+                        <p class="text-sm text-gray-500 mt-0.5">{{ recommended_crops|length }} crop{{ recommended_crops|length|pluralize }} available</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 hidden sm:inline">Click to expand</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+            </button>
+            
+            <!-- Collapsible Content -->
+            <div id="cropRecContent" class="hidden border-t border-gray-200">
+                <div class="px-6 py-6 bg-gradient-to-br from-green-50 to-blue-50">
+                    <p class="text-sm text-gray-700 mb-5">Comprehensive data for all crops available in the system. Compare yields, requirements, and harvest timelines.</p>
+                    
+                    <div class="grid gap-6 md:grid-cols-2">
+                        {% for rec in recommended_crops %}
+                        <div class="bg-white rounded-xl shadow-md border-2 {% if rec.season_match %}border-green-400{% else %}border-gray-300{% endif %} overflow-hidden hover:shadow-xl transition-shadow">
+                            <!-- Header -->
+                            <div class="bg-gradient-to-r {% if 'Rice' in rec.crop.name %}from-amber-500 to-amber-600{% else %}from-yellow-500 to-yellow-600{% endif %} px-5 py-4">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-lg font-bold text-white">{{ rec.crop.name }}</h4>
+                                    {% if rec.season_match %}
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-green-700">
+                                        ✅ Ideal Season
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% if rec.description %}
+                                <p class="text-xs text-white/90 mt-1">{{ rec.description|truncatewords:15 }}</p>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Statistics Content -->
+                            <div class="p-5 space-y-4">
+                                <!-- Yield Statistics -->
+                                <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                        </svg>
+                                        <span class="font-semibold text-green-800">Expected Yield</span>
+                                    </div>
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-3xl font-bold text-green-700">{{ rec.avg_yield|floatformat:1 }}</span>
+                                        <span class="text-sm text-gray-600">tons/ha</span>
+                                    </div>
+                                    <div class="mt-2 text-xs text-gray-600">
+                                        Range: <span class="font-medium">{{ rec.yield_min|floatformat:1 }} - {{ rec.yield_max|floatformat:1 }} tons/ha</span>
+                                    </div>
+                                    <!-- Yield Bar Visualization -->
+                                    <div class="mt-3 w-full bg-gray-200 rounded-full h-2.5">
+                                        <div class="bg-gradient-to-r from-green-500 to-emerald-500 h-2.5 rounded-full" style="width: {% widthratio rec.avg_yield 6 100 %}%"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Requirements Grid -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <!-- Seed Rate -->
+                                    <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                        <div class="flex items-center gap-1.5 mb-1">
+                                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                                            </svg>
+                                            <span class="text-xs font-semibold text-blue-800">Seed Rate</span>
+                                        </div>
+                                        {% if rec.avg_seed_rate > 0 %}
+                                        <p class="text-lg font-bold text-blue-700">{{ rec.avg_seed_rate|floatformat:0 }}</p>
+                                        <p class="text-xs text-gray-600">kg/ha</p>
+                                        <p class="text-xs text-gray-500 mt-1">{{ rec.seed_rate_min|floatformat:0 }}-{{ rec.seed_rate_max|floatformat:0 }} kg</p>
+                                        {% else %}
+                                        <p class="text-sm text-gray-500">N/A</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Fertilizer -->
+                                    <div class="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                                        <div class="flex items-center gap-1.5 mb-1">
+                                            <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                            </svg>
+                                            <span class="text-xs font-semibold text-purple-800">Fertilizer</span>
+                                        </div>
+                                        {% if rec.avg_fert > 0 %}
+                                        <p class="text-lg font-bold text-purple-700">{{ rec.avg_fert|floatformat:1 }}</p>
+                                        <p class="text-xs text-gray-600">sacks/ha</p>
+                                        <p class="text-xs text-gray-500 mt-1">{{ rec.fert_min|floatformat:0 }}-{{ rec.fert_max|floatformat:0 }} sacks</p>
+                                        {% else %}
+                                        <p class="text-sm text-gray-500">N/A</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Harvest Timeline -->
+                                <div class="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span class="font-semibold text-amber-800">Harvest Timeline</span>
+                                    </div>
+                                    <div class="flex items-baseline gap-2 mb-2">
+                                        <span class="text-2xl font-bold text-amber-700">{{ rec.avg_days }}</span>
+                                        <span class="text-sm text-gray-600">days average</span>
+                                    </div>
+                                    <div class="text-xs text-gray-600">
+                                        Range: <span class="font-medium">{{ rec.days_min }} - {{ rec.days_max }} days</span>
+                                    </div>
+                                    <!-- Timeline Bar -->
+                                    <div class="mt-3 flex items-center gap-1">
+                                        <div class="flex-1 bg-gray-200 rounded-full h-2">
+                                            <div class="bg-gradient-to-r from-amber-400 to-orange-500 h-2 rounded-full" style="width: {% widthratio rec.avg_days 130 100 %}%"></div>
+                                        </div>
+                                        <span class="text-xs text-gray-500 ml-2">{{ rec.days_min }}-{{ rec.days_max }}d</span>
+                                    </div>
+                                </div>
+
+                                <!-- Ideal Seasons -->
+                                {% if rec.ideal_seasons %}
+                                <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                        <span class="text-xs font-semibold text-gray-700">Ideal Seasons</span>
+                                    </div>
+                                    <p class="text-sm text-gray-700 font-medium">{{ rec.ideal_seasons }}</p>
+                                </div>
+                                {% endif %}
+
+                                <!-- Quick Action -->
+                                <a href="{% url 'activity_log' %}" class="block w-full text-center bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
+                                    🌱 Plant This Crop
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Comparison Note -->
+                    <div class="mt-6 bg-white/80 backdrop-blur rounded-lg p-4 border border-green-300">
+                        <p class="text-sm text-gray-700">
+                            <strong class="text-green-700">💡 Tip:</strong> Compare crops by yield potential, harvest timeline, and input requirements. 
+                            Rice varieties typically have longer harvest periods (110-130 days) but higher yields, while corn varieties mature faster (90-120 days) with good yield potential.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
 
         <!-- MINI CHARTS -->
         <section class="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -58,6 +58,16 @@ urlpatterns = [
     # EXPENSES
     path('expenses/', views.expense_log_view, name='expense_log'),
     path('charts/expenses/by-crop/', views.chart_expenses_by_crop, name='chart_expenses_by_crop'),
+    
+    # EXPORT EXPENSES
+    path('expenses/export/csv/', views.export_expenses_csv, name='export_expenses_csv'),
+    path('expenses/export/pdf/', views.export_expenses_pdf, name='export_expenses_pdf'),
+    
+    # REPORTS
+    path('reports/', views.reports_view, name='reports'),
+    
+    # CROP REFERENCE GUIDE
+    path('crop-reference/', views.crop_reference_guide, name='crop_reference_guide'),
  
     # REMINDERS
     path('reminders/add/', views.add_reminder, name='add_reminder'),

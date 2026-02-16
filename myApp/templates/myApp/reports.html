@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Reports & Data Export | Agrilog+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 space-y-6">
+    <!-- Header -->
+    <div class="space-y-2">
+        <h1 class="text-3xl font-bold text-green-700">📊 Reports & Data Export</h1>
+        <p class="text-sm text-gray-600">Generate and download reports of your farm activities, expenses, and forecasts.</p>
+    </div>
+
+    <!-- Summary Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-lg shadow p-4 border border-gray-200">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Total Activities</p>
+            <p class="text-2xl font-bold text-green-700">{{ total_activities }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border border-gray-200">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Total Expenses</p>
+            <p class="text-2xl font-bold text-green-700">₱{{ total_expenses|floatformat:2 }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 border border-gray-200">
+            <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Active Forecasts</p>
+            <p class="text-2xl font-bold text-green-700">{{ total_forecasts }}</p>
+        </div>
+    </section>
+
+    <!-- Export Options -->
+    <section class="space-y-6">
+        <!-- Activities Export -->
+        <div class="bg-white rounded-xl shadow px-6 py-5 border border-gray-200">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-green-700 mb-1">📋 Activity Reports</h3>
+                    <p class="text-sm text-gray-600">Export your activity logs including planting, watering, and harvesting records.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="{% url 'export_activities_csv' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export CSV
+                </a>
+                <a href="{% url 'export_activities_pdf' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    Export PDF
+                </a>
+                <a href="{% url 'activity_log' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                    View Activities
+                </a>
+            </div>
+        </div>
+
+        <!-- Expenses Export -->
+        <div class="bg-white rounded-xl shadow px-6 py-5 border border-gray-200">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-green-700 mb-1">💰 Expense Reports</h3>
+                    <p class="text-sm text-gray-600">Export your expense records with crop associations and detailed breakdowns.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="{% url 'export_expenses_csv' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export CSV
+                </a>
+                <a href="{% url 'export_expenses_pdf' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    Export PDF
+                </a>
+                <a href="{% url 'expense_log' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                    View Expenses
+                </a>
+            </div>
+        </div>
+
+        <!-- Forecast Reports (Future) -->
+        <div class="bg-white rounded-xl shadow px-6 py-5 border border-gray-200 opacity-75">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-1">📈 Forecast Reports</h3>
+                    <p class="text-sm text-gray-600">Export yield forecasts and harvest predictions. (Coming soon)</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <button disabled class="inline-flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Export CSV (Soon)
+                </button>
+                <button disabled class="inline-flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    Export PDF (Soon)
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Information Section -->
+    <section class="bg-blue-50 border border-blue-200 rounded-lg p-5">
+        <h4 class="font-semibold text-blue-900 mb-2">ℹ️ About Reports</h4>
+        <ul class="text-sm text-blue-800 space-y-1">
+            <li>• <strong>CSV files</strong> can be opened in Excel, Google Sheets, or any spreadsheet application</li>
+            <li>• <strong>PDF files</strong> are formatted documents suitable for printing or sharing</li>
+            <li>• All reports include data up to today ({{ today|date:"F d, Y" }})</li>
+            <li>• Reports are generated on-demand and include all your records</li>
+        </ul>
+    </section>
+</div>
+{% endblock %}
+

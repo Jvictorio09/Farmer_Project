@@ -79,9 +79,10 @@ def _create_crops():
 
 def _create_activities(farmer):
     """Create activities throughout December 2025 and January 2026."""
-    corn = Crop.objects.get(name="Corn")
-    rice = Crop.objects.get(name="Rice")
-    mango = Crop.objects.get(name="Mango")
+    rice_rc216 = Crop.objects.get(name="Rice - NSIC Rc216")
+    rice_rc222 = Crop.objects.get(name="Rice - NSIC Rc222")
+    yellow_corn = Crop.objects.get(name="Yellow Corn (Hybrid)")
+    white_corn = Crop.objects.get(name="White Corn (Open Pollinated)")
     
     # Create a realistic activity schedule
     # Planting activities (early in the period)
@@ -92,10 +93,10 @@ def _create_activities(farmer):
     
     # December 2025 activities
     activities.append(dict(
-        crop=rice,
+        crop=rice_rc216,
         activity_type="planting",
         date=date(2025, 12, 3),
-        notes="Direct seeding in lowland field. Prepared soil with organic compost.",
+        notes="Direct seeding NSIC Rc216 in lowland field. Prepared soil with organic compost.",
         area_ha=1.2,
         seed_qty_kg=55,
         fert_sacks=5,
@@ -103,58 +104,72 @@ def _create_activities(farmer):
     ))
     
     activities.append(dict(
-        crop=corn,
+        crop=yellow_corn,
         activity_type="planting",
         date=date(2025, 12, 8),
-        notes="Planted corn in upland area. Used hybrid seeds.",
+        notes="Planted yellow corn hybrid in upland area.",
         area_ha=0.8,
-        seed_qty_kg=25,
-        fert_sacks=3,
+        seed_qty_kg=18,
+        fert_sacks=5,
         spacing="75x25 cm",
     ))
     
     activities.append(dict(
-        crop=rice,
-        activity_type="watering",
+        crop=rice_rc222,
+        activity_type="planting",
         date=date(2025, 12, 10),
-        notes="First irrigation after planting. Field conditions good.",
-        area_ha=1.2,  # Same area as the rice planting
+        notes="Planted NSIC Rc222 variety in second field. Transplanted method.",
+        area_ha=0.9,
+        seed_qty_kg=50,
+        fert_sacks=5,
+        spacing="20x20 cm",
     ))
     
     activities.append(dict(
-        crop=corn,
-        activity_type="watering",
+        crop=white_corn,
+        activity_type="planting",
         date=date(2025, 12, 12),
-        notes="Irrigation applied. Monitoring soil moisture.",
-        area_ha=0.8,  # Same area as the corn planting
+        notes="Planted white corn open pollinated variety.",
+        area_ha=0.7,
+        seed_qty_kg=15,
+        fert_sacks=4,
+        spacing="75x25 cm",
     ))
     
     activities.append(dict(
-        crop=rice,
+        crop=rice_rc216,
         activity_type="watering",
-        date=date(2025, 12, 18),
-        notes="Regular watering schedule. No issues observed.",
+        date=date(2025, 12, 15),
+        notes="First irrigation after planting. Field conditions good.",
         area_ha=1.2,
     ))
     
     activities.append(dict(
-        crop=corn,
+        crop=yellow_corn,
         activity_type="watering",
-        date=date(2025, 12, 20),
-        notes="Irrigation after dry spell. Plants showing good growth.",
+        date=date(2025, 12, 18),
+        notes="Irrigation applied. Monitoring soil moisture.",
         area_ha=0.8,
     ))
     
     activities.append(dict(
-        crop=mango,
-        activity_type="harvesting",
-        date=date(2025, 12, 22),
-        notes="Early harvest of mature mangoes. Good quality yield.",
-        area_ha=0.5,  # Mango orchard area
+        crop=rice_rc222,
+        activity_type="watering",
+        date=date(2025, 12, 20),
+        notes="Regular watering schedule. No issues observed.",
+        area_ha=0.9,
     ))
     
     activities.append(dict(
-        crop=rice,
+        crop=white_corn,
+        activity_type="watering",
+        date=date(2025, 12, 22),
+        notes="Irrigation after dry spell. Plants showing good growth.",
+        area_ha=0.7,
+    ))
+    
+    activities.append(dict(
+        crop=rice_rc216,
         activity_type="watering",
         date=date(2025, 12, 25),
         notes="Holiday season maintenance. Field in good condition.",
@@ -162,7 +177,7 @@ def _create_activities(farmer):
     ))
     
     activities.append(dict(
-        crop=corn,
+        crop=yellow_corn,
         activity_type="watering",
         date=date(2025, 12, 28),
         notes="End of month irrigation. Monitoring crop development.",
@@ -171,23 +186,23 @@ def _create_activities(farmer):
     
     # January 2026 activities
     activities.append(dict(
-        crop=rice,
+        crop=rice_rc222,
         activity_type="watering",
         date=date(2026, 1, 5),
         notes="New year maintenance. Rice field progressing well.",
-        area_ha=1.2,
+        area_ha=0.9,
     ))
     
     activities.append(dict(
-        crop=corn,
+        crop=white_corn,
         activity_type="watering",
         date=date(2026, 1, 8),
         notes="Regular irrigation. Corn plants healthy.",
-        area_ha=0.8,
+        area_ha=0.7,
     ))
     
     activities.append(dict(
-        crop=rice,
+        crop=rice_rc216,
         activity_type="watering",
         date=date(2026, 1, 12),
         notes="Mid-month irrigation. No pest issues detected.",
@@ -195,7 +210,7 @@ def _create_activities(farmer):
     ))
     
     activities.append(dict(
-        crop=corn,
+        crop=yellow_corn,
         activity_type="watering",
         date=date(2026, 1, 15),
         notes="Watering schedule maintained. Good weather conditions.",
@@ -203,43 +218,43 @@ def _create_activities(farmer):
     ))
     
     activities.append(dict(
-        crop=mango,
+        crop=white_corn,
         activity_type="harvesting",
         date=date(2026, 1, 18),
-        notes="Second harvest cycle. Mangoes ready for market.",
-        area_ha=0.5,
+        notes="White corn harvest completed. Good yield achieved.",
+        area_ha=0.7,
     ))
     
     activities.append(dict(
-        crop=rice,
+        crop=rice_rc222,
         activity_type="watering",
         date=date(2026, 1, 20),
         notes="Continued irrigation. Rice plants maturing.",
-        area_ha=1.2,
+        area_ha=0.9,
     ))
     
     activities.append(dict(
-        crop=corn,
+        crop=yellow_corn,
         activity_type="harvesting",
         date=date(2026, 1, 25),
-        notes="Corn harvest completed. Good yield achieved.",
+        notes="Yellow corn harvest completed. Good yield achieved.",
         area_ha=0.8,
     ))
     
     activities.append(dict(
-        crop=rice,
+        crop=rice_rc216,
         activity_type="harvesting",
         date=date(2026, 1, 28),
-        notes="Rice harvest completed. Successful season overall.",
+        notes="NSIC Rc216 harvest completed. Successful season overall.",
         area_ha=1.2,
     ))
     
     activities.append(dict(
-        crop=rice,
+        crop=rice_rc222,
         activity_type="watering",
         date=date(2026, 1, 30),
         notes="Final irrigation before harvest. Field inspection done.",
-        area_ha=1.2,
+        area_ha=0.9,
     ))
 
     created = []
@@ -267,51 +282,57 @@ def _create_activities(farmer):
 
 def _create_activities_upcoming_harvest(farmer):
     """Create activities for farmer_carlos with a harvest within 5 days of Feb 16, 2026."""
-    vegetables = Crop.objects.get(name="Vegetables")
+    rice_rc222 = Crop.objects.get(name="Rice - NSIC Rc222")
     
-    # Vegetables has days_to_harvest_min = 70
-    # To get harvest_start on Feb 16, 2026 (today), plant on Dec 8, 2025 (70 days earlier)
-    # Or to get harvest_start on Feb 18, 2026 (2 days from now), plant on Dec 10, 2025
-    # Let's use Feb 18, 2026 as harvest_start (2 days from today)
-    planting_date = date(2025, 12, 10)  # 70 days before Feb 18, 2026
+    # Rice has days_to_harvest_min = 110
+    # To get harvest_start on Feb 18, 2026 (2 days from today), plant on Nov 1, 2025 (110 days earlier)
+    planting_date = date(2025, 11, 1)  # 110 days before Feb 18, 2026
     
     activities = []
     
     # Planting activity that will result in harvest_start on Feb 18, 2026
     activities.append(dict(
-        crop=vegetables,
+        crop=rice_rc222,
         activity_type="planting",
         date=planting_date,
-        notes="Planted mixed vegetables (eggplant, tomato, okra) in raised beds. Applied organic compost.",
-        area_ha=0.5,
-        seed_qty_kg=3,
+        notes="Planted NSIC Rc222 rice variety. Direct seeding method. Applied organic compost.",
+        area_ha=1.0,
+        seed_qty_kg=50,
         fert_sacks=5,
-        spacing="50x50 cm",
+        spacing="20x20 cm",
     ))
     
     # Some watering activities
     activities.append(dict(
-        crop=vegetables,
+        crop=rice_rc222,
         activity_type="watering",
-        date=date(2025, 12, 15),
+        date=date(2025, 11, 10),
         notes="First irrigation after planting. Soil moisture good.",
-        area_ha=0.5,
+        area_ha=1.0,
     ))
     
     activities.append(dict(
-        crop=vegetables,
+        crop=rice_rc222,
         activity_type="watering",
-        date=date(2026, 1, 5),
+        date=date(2025, 12, 5),
         notes="Regular watering schedule. Plants growing well.",
-        area_ha=0.5,
+        area_ha=1.0,
     ))
     
     activities.append(dict(
-        crop=vegetables,
+        crop=rice_rc222,
+        activity_type="watering",
+        date=date(2026, 1, 15),
+        notes="Mid-season irrigation. Rice plants maturing.",
+        area_ha=1.0,
+    ))
+    
+    activities.append(dict(
+        crop=rice_rc222,
         activity_type="watering",
         date=date(2026, 2, 10),
-        notes="Final watering before harvest. Vegetables ready soon.",
-        area_ha=0.5,
+        notes="Final watering before harvest. Rice ready soon.",
+        area_ha=1.0,
     ))
 
     created = []
@@ -338,16 +359,22 @@ def _create_activities_upcoming_harvest(farmer):
 
 def _create_expenses(farmer):
     """Create expenses distributed across December 2025 and January 2026."""
+    # Get crop objects
+    rice_rc216 = Crop.objects.get(name="Rice - NSIC Rc216")
+    rice_rc222 = Crop.objects.get(name="Rice - NSIC Rc222")
+    yellow_corn = Crop.objects.get(name="Yellow Corn (Hybrid)")
+    white_corn = Crop.objects.get(name="White Corn (Open Pollinated)")
+    
     entries = [
-        dict(expense_type="seed", amount=Decimal("3500.00"), date=date(2025, 12, 2), description="Certified rice seeds for planting"),
-        dict(expense_type="fertilizer", amount=Decimal("4200.50"), date=date(2025, 12, 5), description="Urea fertilizer - initial application"),
-        dict(expense_type="labor", amount=Decimal("1800.00"), date=date(2025, 12, 15), description="Field preparation and weeding labor"),
-        dict(expense_type="fertilizer", amount=Decimal("3800.00"), date=date(2025, 12, 20), description="NPK fertilizer for corn field"),
-        dict(expense_type="labor", amount=Decimal("2200.00"), date=date(2025, 12, 23), description="Mango harvesting labor"),
-        dict(expense_type="seed", amount=Decimal("2800.00"), date=date(2026, 1, 2), description="Corn seeds for replanting"),
-        dict(expense_type="fertilizer", amount=Decimal("3500.00"), date=date(2026, 1, 10), description="Top dressing fertilizer application"),
-        dict(expense_type="labor", amount=Decimal("2500.00"), date=date(2026, 1, 18), description="Harvesting labor - mango and corn"),
-        dict(expense_type="labor", amount=Decimal("3000.00"), date=date(2026, 1, 28), description="Rice harvesting and threshing labor"),
+        dict(expense_type="seed", amount=Decimal("3500.00"), date=date(2025, 12, 2), description="Certified rice seeds for planting", crop=rice_rc216),
+        dict(expense_type="fertilizer", amount=Decimal("4200.50"), date=date(2025, 12, 5), description="Urea fertilizer - initial application", crop=rice_rc216),
+        dict(expense_type="labor", amount=Decimal("1800.00"), date=date(2025, 12, 15), description="Field preparation and weeding labor", crop=rice_rc216),
+        dict(expense_type="fertilizer", amount=Decimal("3800.00"), date=date(2025, 12, 20), description="NPK fertilizer for corn field", crop=yellow_corn),
+        dict(expense_type="labor", amount=Decimal("2200.00"), date=date(2025, 12, 23), description="Corn harvesting labor", crop=yellow_corn),
+        dict(expense_type="seed", amount=Decimal("2800.00"), date=date(2026, 1, 2), description="Corn seeds for replanting", crop=white_corn),
+        dict(expense_type="fertilizer", amount=Decimal("3500.00"), date=date(2026, 1, 10), description="Top dressing fertilizer application", crop=rice_rc222),
+        dict(expense_type="labor", amount=Decimal("2500.00"), date=date(2026, 1, 18), description="Harvesting labor - white corn", crop=white_corn),
+        dict(expense_type="labor", amount=Decimal("3000.00"), date=date(2026, 1, 28), description="Rice harvesting and threshing labor", crop=rice_rc216),
     ]
     created = []
     for data in entries:
@@ -358,6 +385,7 @@ def _create_expenses(farmer):
             defaults={
                 "amount": data["amount"],
                 "description": data["description"],
+                "crop": data.get("crop"),
             },
         )
         created.append(expense)
@@ -383,8 +411,10 @@ def _create_reminders(farmer):
 
 def _create_recommendations():
     recs = [
-        dict(crop_name="Rice", region="Ilocos Norte", month="July", reason="Monsoon rains ideal for transplanting."),
-        dict(crop_name="Corn", region="Bukidnon", month="September", reason="Favorable temperature and rainfall pattern."),
+        dict(crop_name="Rice - NSIC Rc216", region="Ilocos Norte", month="July", reason="Monsoon rains ideal for transplanting."),
+        dict(crop_name="Rice - NSIC Rc222", region="Ilocos Norte", month="July", reason="Monsoon rains ideal for transplanting."),
+        dict(crop_name="Yellow Corn (Hybrid)", region="Bukidnon", month="September", reason="Favorable temperature and rainfall pattern."),
+        dict(crop_name="White Corn (Open Pollinated)", region="Bukidnon", month="September", reason="Favorable temperature and rainfall pattern."),
     ]
     for entry in recs:
         crop = Crop.objects.filter(name=entry["crop_name"]).first()
@@ -412,6 +442,12 @@ def main():
     farmer_ben = User.objects.get(username="farmer_ben")
     farmer_rosa = User.objects.get(username="farmer_rosa")
     farmer_carlos = User.objects.get(username="farmer_carlos")
+
+    # Delete existing activities, expenses, forecasts, and reminders for clean slate
+    Activity.objects.filter(farmer__in=[farmer_ben, farmer_rosa, farmer_carlos]).delete()
+    Expense.objects.filter(farmer__in=[farmer_ben, farmer_rosa, farmer_carlos]).delete()
+    Forecast.objects.filter(farmer__in=[farmer_ben, farmer_rosa, farmer_carlos]).delete()
+    Reminder.objects.filter(farmer__in=[farmer_ben, farmer_rosa, farmer_carlos]).delete()
 
     activities_ben = _create_activities(farmer_ben)
     activities_rosa = _create_activities(farmer_rosa)
