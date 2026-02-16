@@ -1,117 +1,262 @@
 <header class="bg-green-700 text-white shadow relative">
-    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-        <h1 class="text-2xl font-bold tracking-tight">🌾 Agrilog+</h1>
-        <nav class="space-x-6 text-sm font-medium flex items-center">
-            <a href="{% url 'farmer_dashboard' %}" class="hover:underline {% if request.path == '/dashboard/' %}underline font-bold{% endif %}">
-        Dashboard
-      </a>
-            <a href="{% url 'activity_log' %}" class="hover:underline {% if request.path == '/activities/' %}underline font-bold{% endif %}">
-        Activities
-      </a>
-
-            <a href="{% url 'expense_log' %}" class="hover:underline {% if request.path == '/expenses/' %}underline font-bold{% endif %}">Expenses</a>
+    <div class="container mx-auto px-4 py-4">
+        <!-- Top Bar: Logo, Mobile Menu Button, and Action Items -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-xl sm:text-2xl font-bold tracking-tight">🌾 Agrilog+</h1>
             
-            <a href="{% url 'reports' %}" class="hover:underline {% if request.path == '/reports/' %}underline font-bold{% endif %}">Reports</a>
-            
-            <a href="{% url 'crop_reference_guide' %}" class="hover:underline {% if request.path == '/crop-reference/' %}underline font-bold{% endif %}">Crop Guide</a>
-            
-            {% if has_upcoming_harvests %}
-            <!-- Notification Bell -->
-            <div class="relative">
-                <button 
-                    id="notification-bell"
-                    onclick="toggleNotificationDropdown()"
-                    class="relative p-2 rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors"
-                    aria-label="Harvest notifications">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                    </svg>
-                    <span class="absolute top-0 right-0 block h-4 w-4 rounded-full bg-red-500 ring-2 ring-green-700">
-                        <span class="absolute top-0.5 left-0.5 block h-3 w-3 rounded-full bg-red-500 animate-pulse"></span>
-                    </span>
-                    <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
-                        {{ upcoming_harvests|length }}
-                    </span>
-                </button>
-                
-                <!-- Dropdown Panel -->
-                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
-                    <div class="p-4 border-b border-gray-200 bg-amber-50">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-semibold text-gray-800">🌾 Harvest Reminders</h3>
-                            <button 
-                                onclick="toggleNotificationDropdown()"
-                                class="text-gray-500 hover:text-gray-700 focus:outline-none">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
+            <!-- Desktop: Right side items (Notification + Logout) -->
+            <div class="hidden md:flex items-center gap-4">
+                {% if has_upcoming_harvests %}
+                <!-- Notification Bell -->
+                <div class="relative">
+                    <button 
+                        id="notification-bell"
+                        onclick="toggleNotificationDropdown()"
+                        class="relative p-2 rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors"
+                        aria-label="Harvest notifications">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span class="absolute top-0 right-0 block h-4 w-4 rounded-full bg-red-500 ring-2 ring-green-700">
+                            <span class="absolute top-0.5 left-0.5 block h-3 w-3 rounded-full bg-red-500 animate-pulse"></span>
+                        </span>
+                        <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                            {{ upcoming_harvests|length }}
+                        </span>
+                    </button>
+                    
+                    <!-- Dropdown Panel -->
+                    <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                        <div class="p-4 border-b border-gray-200 bg-amber-50">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-800">🌾 Harvest Reminders</h3>
+                                <button 
+                                    onclick="toggleNotificationDropdown()"
+                                    class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">{{ upcoming_harvests|length }} upcoming harvest{{ upcoming_harvests|length|pluralize }} within 5 days</p>
                         </div>
-                        <p class="text-sm text-gray-600 mt-1">{{ upcoming_harvests|length }} upcoming harvest{{ upcoming_harvests|length|pluralize }} within 5 days</p>
-                    </div>
-                    <div class="p-2">
-                        {% for harvest in upcoming_harvests %}
-                        <div class="p-3 mb-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="font-semibold text-gray-900 mb-1">{{ harvest.crop }}</h4>
-                                    <div class="text-sm text-gray-600 space-y-1">
-                                        <div class="flex items-center gap-2">
-                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                            </svg>
-                                            <span>{{ harvest.harvest_start|date:"M d, Y" }}</span>
+                        <div class="p-2">
+                            {% for harvest in upcoming_harvests %}
+                            <div class="p-3 mb-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-semibold text-gray-900 mb-1">{{ harvest.crop }}</h4>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                </svg>
+                                                <span>{{ harvest.harvest_start|date:"M d, Y" }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                <span>{{ harvest.days_until }} day{{ harvest.days_until|pluralize }} remaining</span>
+                                            </div>
+                                            {% if harvest.forecast.expected_yield_kg %}
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                                </svg>
+                                                <span>Expected: {{ harvest.forecast.expected_yield_kg|floatformat:0 }} kg</span>
+                                            </div>
+                                            {% endif %}
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <span>{{ harvest.days_until }} day{{ harvest.days_until|pluralize }} remaining</span>
-                                        </div>
-                                        {% if harvest.forecast.expected_yield_kg %}
-                                        <div class="flex items-center gap-2">
-                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                            </svg>
-                                            <span>Expected: {{ harvest.forecast.expected_yield_kg|floatformat:0 }} kg</span>
-                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex-shrink-0">
+                                        {% if harvest.days_until == 0 %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                Today!
+                                            </span>
+                                        {% elif harvest.days_until == 1 %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                Tomorrow
+                                            </span>
+                                        {% elif harvest.days_until <= 3 %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                                Soon
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Upcoming
+                                            </span>
                                         {% endif %}
                                     </div>
                                 </div>
-                                <div class="ml-3 flex-shrink-0">
-                                    {% if harvest.days_until == 0 %}
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Today!
-                                        </span>
-                                    {% elif harvest.days_until == 1 %}
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                            Tomorrow
-                                        </span>
-                                    {% elif harvest.days_until <= 3 %}
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                            Soon
-                                        </span>
-                                    {% else %}
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Upcoming
-                                        </span>
-                                    {% endif %}
-                                </div>
                             </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
                 </div>
+                {% endif %}
+                
+                <!-- Desktop Navigation Links -->
+                <nav class="flex items-center space-x-4 text-sm font-medium">
+                    <a href="{% url 'farmer_dashboard' %}" class="hover:underline {% if request.path == '/dashboard/' %}underline font-bold{% endif %}">
+                        Dashboard
+                    </a>
+                    <a href="{% url 'activity_log' %}" class="hover:underline {% if request.path == '/activities/' %}underline font-bold{% endif %}">
+                        Activities
+                    </a>
+                    <a href="{% url 'expense_log' %}" class="hover:underline {% if request.path == '/expenses/' %}underline font-bold{% endif %}">
+                        Expenses
+                    </a>
+                    <a href="{% url 'reports' %}" class="hover:underline {% if request.path == '/reports/' %}underline font-bold{% endif %}">
+                        Reports
+                    </a>
+                    <a href="{% url 'crop_reference_guide' %}" class="hover:underline {% if request.path == '/crop-reference/' %}underline font-bold{% endif %}">
+                        Crop Guide
+                    </a>
+                </nav>
+                
+                <!-- Logout -->
+                <form method="POST" action="{% url 'logout' %}" class="inline" data-confirm="logout">
+                    {% csrf_token %}
+                    <button type="submit" class="hover:underline bg-transparent text-white focus:outline-none text-sm font-medium">
+                        Logout
+                    </button>
+                </form>
             </div>
-            {% endif %}
             
-            <!-- Logout -->
-            <form method="POST" action="{% url 'logout' %}" class="inline" data-confirm="logout">
-                {% csrf_token %}
-                <button type="submit" class="hover:underline bg-transparent text-white focus:outline-none">
-          Logout
-        </button>
-            </form>
+            <!-- Mobile: Hamburger Menu Button + Action Items -->
+            <div class="flex md:hidden items-center gap-3">
+                {% if has_upcoming_harvests %}
+                <!-- Mobile Notification Bell -->
+                <div class="relative">
+                    <button 
+                        id="notification-bell-mobile"
+                        onclick="toggleNotificationDropdown()"
+                        class="relative p-2 rounded-full hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors"
+                        aria-label="Harvest notifications">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span class="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-green-700">
+                            <span class="absolute top-0.5 left-0.5 block h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                        </span>
+                        <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                            {{ upcoming_harvests|length }}
+                        </span>
+                    </button>
+                    <!-- Mobile Dropdown Panel (same dropdown, positioned for mobile) -->
+                    <div id="notification-dropdown-mobile" class="hidden fixed right-4 left-4 sm:left-auto sm:right-0 sm:w-80 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                        <div class="p-4 border-b border-gray-200 bg-amber-50">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-800">🌾 Harvest Reminders</h3>
+                                <button 
+                                    onclick="toggleNotificationDropdown()"
+                                    class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">{{ upcoming_harvests|length }} upcoming harvest{{ upcoming_harvests|length|pluralize }} within 5 days</p>
+                        </div>
+                        <div class="p-2">
+                            {% for harvest in upcoming_harvests %}
+                            <div class="p-3 mb-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-semibold text-gray-900 mb-1">{{ harvest.crop }}</h4>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                </svg>
+                                                <span>{{ harvest.harvest_start|date:"M d, Y" }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                <span>{{ harvest.days_until }} day{{ harvest.days_until|pluralize }} remaining</span>
+                                            </div>
+                                            {% if harvest.forecast.expected_yield_kg %}
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                                </svg>
+                                                <span>Expected: {{ harvest.forecast.expected_yield_kg|floatformat:0 }} kg</span>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex-shrink-0">
+                                        {% if harvest.days_until == 0 %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                Today!
+                                            </span>
+                                        {% elif harvest.days_until == 1 %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                                Tomorrow
+                                            </span>
+                                        {% elif harvest.days_until <= 3 %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                                Soon
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Upcoming
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Hamburger Menu Button -->
+                <button 
+                    id="mobile-menu-toggle"
+                    onclick="toggleMobileMenu()"
+                    class="p-2 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-white transition-colors"
+                    aria-label="Toggle menu"
+                    aria-expanded="false">
+                    <svg id="mobile-menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    <svg id="mobile-menu-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu Dropdown -->
+        <nav id="mobile-menu" class="hidden md:hidden mt-4 pb-2 border-t border-green-600">
+            <div class="flex flex-col space-y-1 pt-3">
+                <a href="{% url 'farmer_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                    Dashboard
+                </a>
+                <a href="{% url 'activity_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/activities/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                    Activities
+                </a>
+                <a href="{% url 'expense_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/expenses/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                    Expenses
+                </a>
+                <a href="{% url 'reports' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/reports/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                    Reports
+                </a>
+                <a href="{% url 'crop_reference_guide' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 {% if request.path == '/crop-reference/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                    Crop Guide
+                </a>
+                <form method="POST" action="{% url 'logout' %}" class="px-3 py-2" data-confirm="logout" onclick="closeMobileMenu()">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full text-left text-sm font-medium hover:bg-green-600 rounded-md px-3 py-2 -mx-3 -my-2">
+                        Logout
+                    </button>
+                </form>
+            </div>
         </nav>
     </div>
     {% if request.user.is_authenticated and request.user.role == 'technician' %}

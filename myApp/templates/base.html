@@ -146,18 +146,85 @@
       // Notification bell dropdown functionality
       function toggleNotificationDropdown() {
         const dropdown = document.getElementById('notification-dropdown');
+        const dropdownMobile = document.getElementById('notification-dropdown-mobile');
+        
+        // Toggle desktop dropdown
         if (dropdown) {
           dropdown.classList.toggle('hidden');
         }
+        
+        // Toggle mobile dropdown
+        if (dropdownMobile) {
+          dropdownMobile.classList.toggle('hidden');
+        }
+        
+        // Close mobile menu if open
+        closeMobileMenu();
       }
-
+      
       // Close dropdown when clicking outside
       document.addEventListener('click', function(event) {
         const bell = document.getElementById('notification-bell');
+        const bellMobile = document.getElementById('notification-bell-mobile');
         const dropdown = document.getElementById('notification-dropdown');
+        const dropdownMobile = document.getElementById('notification-dropdown-mobile');
         
-        if (dropdown && bell && !bell.contains(event.target) && !dropdown.contains(event.target)) {
+        if (dropdown && ((bell && !bell.contains(event.target)) || (bellMobile && !bellMobile.contains(event.target))) && !dropdown.contains(event.target)) {
           dropdown.classList.add('hidden');
+        }
+        
+        if (dropdownMobile && ((bell && !bell.contains(event.target)) || (bellMobile && !bellMobile.contains(event.target))) && !dropdownMobile.contains(event.target)) {
+          dropdownMobile.classList.add('hidden');
+        }
+      });
+      
+      // Mobile menu toggle
+      function toggleMobileMenu() {
+        const menu = document.getElementById('mobile-menu');
+        const toggle = document.getElementById('mobile-menu-toggle');
+        const icon = document.getElementById('mobile-menu-icon');
+        const closeIcon = document.getElementById('mobile-menu-close');
+        
+        if (menu && toggle && icon && closeIcon) {
+          const isHidden = menu.classList.contains('hidden');
+          
+          if (isHidden) {
+            menu.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'true');
+            icon.classList.add('hidden');
+            closeIcon.classList.remove('hidden');
+          } else {
+            menu.classList.add('hidden');
+            toggle.setAttribute('aria-expanded', 'false');
+            icon.classList.remove('hidden');
+            closeIcon.classList.add('hidden');
+          }
+        }
+      }
+      
+      function closeMobileMenu() {
+        const menu = document.getElementById('mobile-menu');
+        const toggle = document.getElementById('mobile-menu-toggle');
+        const icon = document.getElementById('mobile-menu-icon');
+        const closeIcon = document.getElementById('mobile-menu-close');
+        
+        if (menu && toggle && icon && closeIcon) {
+          menu.classList.add('hidden');
+          toggle.setAttribute('aria-expanded', 'false');
+          icon.classList.remove('hidden');
+          closeIcon.classList.add('hidden');
+        }
+      }
+      
+      // Close mobile menu when clicking outside
+      document.addEventListener('click', function(event) {
+        const menu = document.getElementById('mobile-menu');
+        const toggle = document.getElementById('mobile-menu-toggle');
+        
+        if (menu && toggle && !menu.contains(event.target) && !toggle.contains(event.target)) {
+          if (!menu.classList.contains('hidden')) {
+            closeMobileMenu();
+          }
         }
       });
     </script>
