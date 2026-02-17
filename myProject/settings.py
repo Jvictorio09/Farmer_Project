@@ -128,7 +128,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # settings.py
 LOGIN_URL = 'login'                       # your urlpattern name
-LOGIN_REDIRECT_URL = 'farmer_dashboard'   # or '/dashboard/'
+LOGIN_REDIRECT_URL = 'home'              # redirects to role_redirect_view which handles role-based routing
 LOGOUT_REDIRECT_URL = 'login'
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')

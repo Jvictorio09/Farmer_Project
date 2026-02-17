@@ -100,21 +100,33 @@
                 
                 <!-- Desktop Navigation Links -->
                 <nav class="flex items-center space-x-4 text-sm font-medium" role="navigation" aria-label="Main navigation">
-                    <a href="{% url 'farmer_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
-                        Dashboard
-                    </a>
-                    <a href="{% url 'activity_log' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/activities/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
-                        Activities
-                    </a>
-                    <a href="{% url 'expense_log' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/expenses/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
-                        Expenses
-                    </a>
-                    <a href="{% url 'reports' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/reports/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
-                        Reports
-                    </a>
-                    <a href="{% url 'crop_reference_guide' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/crop-reference/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
-                        Crop Guide
-                    </a>
+                    {% if request.user.is_authenticated and request.user.role == 'admin' %}
+                        <a href="{% url 'admin_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/admin/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Admin Dashboard
+                        </a>
+                        <a href="{% url 'admin_create_user' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/admin/create-user/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Create User
+                        </a>
+                        <a href="/admin/" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap" style="pointer-events: auto;">
+                            Django Admin
+                        </a>
+                    {% else %}
+                        <a href="{% url 'farmer_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Dashboard
+                        </a>
+                        <a href="{% url 'activity_log' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/activities/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Activities
+                        </a>
+                        <a href="{% url 'expense_log' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/expenses/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Expenses
+                        </a>
+                        <a href="{% url 'reports' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/reports/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Reports
+                        </a>
+                        <a href="{% url 'crop_reference_guide' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/crop-reference/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Crop Guide
+                        </a>
+                    {% endif %}
                 </nav>
                 
                 <!-- Logout -->
@@ -239,21 +251,33 @@
         <!-- Mobile Menu Dropdown -->
         <nav id="mobile-menu" class="hidden md:hidden mt-4 pb-2 border-t border-green-600">
             <div class="flex flex-col space-y-1 pt-3">
-                <a href="{% url 'farmer_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
-                    Dashboard
-                </a>
-                <a href="{% url 'activity_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/activities/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
-                    Activities
-                </a>
-                <a href="{% url 'expense_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/expenses/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
-                    Expenses
-                </a>
-                <a href="{% url 'reports' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/reports/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
-                    Reports
-                </a>
-                <a href="{% url 'crop_reference_guide' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/crop-reference/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
-                    Crop Guide
-                </a>
+                {% if request.user.is_authenticated and request.user.role == 'admin' %}
+                    <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/admin/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Admin Dashboard
+                    </a>
+                    <a href="{% url 'admin_create_user' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/admin/create-user/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Create User
+                    </a>
+                    <a href="/admin/" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors" onclick="closeMobileMenu()">
+                        Django Admin
+                    </a>
+                {% else %}
+                    <a href="{% url 'farmer_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Dashboard
+                    </a>
+                    <a href="{% url 'activity_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/activities/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Activities
+                    </a>
+                    <a href="{% url 'expense_log' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/expenses/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Expenses
+                    </a>
+                    <a href="{% url 'reports' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/reports/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Reports
+                    </a>
+                    <a href="{% url 'crop_reference_guide' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/crop-reference/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Crop Guide
+                    </a>
+                {% endif %}
                 <form method="POST" action="{% url 'logout' %}" class="px-3 py-2" data-confirm="logout">
                     {% csrf_token %}
                     <button type="submit" class="w-full text-left text-sm font-medium hover:bg-green-600 rounded-md px-3 py-2 -mx-3 -my-2 cursor-pointer transition-colors" onclick="closeMobileMenu()">

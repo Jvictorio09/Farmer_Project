@@ -39,7 +39,7 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect("farmer_dashboard")
+            return redirect("home")  # Use role_redirect_view to handle role-based routing
     else:
         form = CustomUserCreationForm()
     return render(request, "auth/register.html", {"form": form})
@@ -55,7 +55,7 @@ def role_redirect_view(request):
         return redirect("login")
 
     if request.user.role == "admin":
-        return redirect("/admin/")
+        return redirect("admin_dashboard")
 
     return redirect("farmer_dashboard")
 
@@ -1024,3 +1024,101 @@ def chart_expenses_by_crop(request):
         "labels": labels,
         "data": data
     })
+
+
+# =====================================================
+# 👑 ADMIN DASHBOARD
+# =====================================================
+
+@login_required
+def admin_dashboard(request):
+    """Admin dashboard showing all farmers and system stats"""
+    if not request.user.is_admin():
+        messages.error(request, "Access denied. Admin only.")
+        return redirect("farmer_dashboard")
+    
+    # Get all farmers
+    farmers = User.objects.filter(role='farmer').order_by('-date_joined')
+    
+    # System-wide statistics
+    total_farmers = User.objects.filter(role='farmer').count()
+    total_technicians = User.objects.filter(role='technician').count()
+    total_admins = User.objects.filter(role='admin').count()
+    
+    # Crop statistics
+    total_activities = Activity.objects.count()
+    total_plantings = Activity.objects.filter(activity_type='planting').count()
+    total_crops = Crop.objects.count()
+    
+    # Get crops planted by farmers (with counts)
+    crops_planted = Activity.objects.filter(
+        activity_type='planting'
+    ).values(
+        'crop__name'
+    ).annotate(
+        count=Count('id'),
+        total_area=Sum('area_ha')
+    ).order_by('-count')[:10]
+    
+    # Get farmers with most activities
+    top_farmers = Activity.objects.values(
+        'farmer__username',
+        'farmer__region'
+    ).annotate(
+        activity_count=Count('id')
+    ).order_by('-activity_count')[:10]
+    
+    # Get recent activities
+    recent_activities = Activity.objects.select_related(
+        'farmer', 'crop'
+    ).order_by('-date')[:10]
+    
+    # Total expenses
+    total_expenses = Expense.objects.aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    # Forecasts statistics
+    total_forecasts = Forecast.objects.count()
+    upcoming_harvests = Forecast.objects.filter(
+        harvest_start__gte=date.today()
+    ).count()
+    
+    context = {
+        'farmers': farmers,
+        'total_farmers': total_farmers,
+        'total_technicians': total_technicians,
+        'total_admins': total_admins,
+        'total_activities': total_activities,
+        'total_plantings': total_plantings,
+        'total_crops': total_crops,
+        'crops_planted': crops_planted,
+        'top_farmers': top_farmers,
+        'recent_activities': recent_activities,
+        'total_expenses': total_expenses,
+        'total_forecasts': total_forecasts,
+        'upcoming_harvests': upcoming_harvests,
+    }
+    
+    return render(request, 'myApp/admin_dashboard.html', context)
+
+
+@login_required
+def admin_create_user(request):
+    """Admin view to create new users"""
+    if not request.user.is_admin():
+        messages.error(request, "Access denied. Admin only.")
+        return redirect("farmer_dashboard")
+    
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f'User "{user.username}" created successfully!')
+            return redirect('admin_dashboard')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CustomUserCreationForm()
+    
+    return render(request, 'myApp/admin_create_user.html', {'form': form})
