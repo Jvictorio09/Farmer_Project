@@ -6,7 +6,8 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth
-from datetime import date
+from django.core.paginator import Paginator
+from datetime import date, timedelta
 import csv
 import calendar
 from io import BytesIO
@@ -56,6 +57,9 @@ def role_redirect_view(request):
 
     if request.user.role == "admin":
         return redirect("admin_dashboard")
+    
+    if request.user.role == "technician":
+        return redirect("technician_dashboard")
 
     return redirect("farmer_dashboard")
 
@@ -1122,3 +1126,307 @@ def admin_create_user(request):
         form = CustomUserCreationForm()
     
     return render(request, 'myApp/admin_create_user.html', {'form': form})
+
+
+# =====================================================
+# 🔧 TECHNICIAN DASHBOARD
+# =====================================================
+
+@login_required
+def technician_dashboard(request):
+    """Technician dashboard with overview of all farmers"""
+    if not request.user.is_technician():
+        messages.error(request, "Access denied. Technician only.")
+        return redirect("farmer_dashboard")
+    
+    # Get all farmers
+    farmers = User.objects.filter(role='farmer').order_by('-date_joined')
+    
+    # Statistics
+    total_farmers = farmers.count()
+    total_activities = Activity.objects.count()
+    total_plantings = Activity.objects.filter(activity_type='planting').count()
+    
+    # Upcoming harvests
+    upcoming_harvests = Forecast.objects.filter(
+        harvest_start__gte=date.today()
+    ).order_by('harvest_start')[:10]
+    
+    # Recent activities across all farmers
+    recent_activities = Activity.objects.select_related(
+        'farmer', 'crop'
+    ).order_by('-date')[:10]
+    
+    # Total expenses
+    total_expenses = Expense.objects.aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    # Active crops (crops with recent plantings)
+    active_crops = Activity.objects.filter(
+        activity_type='planting',
+        date__gte=timezone.now().date() - timedelta(days=90)
+    ).values('crop__name').distinct().count()
+    
+    context = {
+        'farmers': farmers,
+        'total_farmers': total_farmers,
+        'total_activities': total_activities,
+        'total_plantings': total_plantings,
+        'active_crops': active_crops,
+        'upcoming_harvests': upcoming_harvests,
+        'recent_activities': recent_activities,
+        'total_expenses': total_expenses,
+    }
+    
+    return render(request, 'myApp/technician_dashboard.html', context)
+
+
+@login_required
+def technician_farmers(request):
+    """List of all farmers for technicians"""
+    if not request.user.is_technician():
+        messages.error(request, "Access denied. Technician only.")
+        return redirect("farmer_dashboard")
+    
+    farmers = User.objects.filter(role='farmer').order_by('-date_joined')
+    
+    # Add statistics for each farmer
+    farmers_with_stats = []
+    for farmer in farmers:
+        activity_count = Activity.objects.filter(farmer=farmer).count()
+        active_forecasts = Forecast.objects.filter(farmer=farmer).count()
+        last_activity = Activity.objects.filter(farmer=farmer).order_by('-date').first()
+        
+        farmers_with_stats.append({
+            'farmer': farmer,
+            'activity_count': activity_count,
+            'active_forecasts': active_forecasts,
+            'last_activity': last_activity,
+        })
+    
+    context = {
+        'farmers_with_stats': farmers_with_stats,
+    }
+    
+    return render(request, 'myApp/technician_farmers.html', context)
+
+
+@login_required
+def technician_farmer_detail(request, farmer_id):
+    """Read-only view of a specific farmer's dashboard"""
+    if not request.user.is_technician():
+        messages.error(request, "Access denied. Technician only.")
+        return redirect("farmer_dashboard")
+    
+    farmer = get_object_or_404(User, id=farmer_id, role='farmer')
+    
+    # Get farmer's data (same as farmer_dashboard but read-only)
+    today = timezone.now().date()
+    
+    # Reminders
+    reminders = Reminder.objects.filter(farmer=farmer, due_date__gte=today).order_by('due_date')[:5]
+    
+    # Forecasts
+    forecasts = Forecast.objects.filter(farmer=farmer).order_by('-forecast_date')[:5]
+    
+    # Recent activities
+    recent_activities = Activity.objects.filter(farmer=farmer).order_by('-date')[:10]
+    
+    # Recent expenses
+    recent_expenses = Expense.objects.filter(farmer=farmer).order_by('-date')[:10]
+    
+    # Statistics
+    total_activities = Activity.objects.filter(farmer=farmer).count()
+    total_expenses = Expense.objects.filter(farmer=farmer).aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+    
+    # Crops
+    crops = Crop.objects.all()
+    
+    context = {
+        'farmer': farmer,
+        'reminders': reminders,
+        'forecasts': forecasts,
+        'recent_activities': recent_activities,
+        'recent_expenses': recent_expenses,
+        'total_activities': total_activities,
+        'total_expenses': total_expenses,
+        'crops': crops,
+        'is_readonly': True,  # Flag to indicate read-only mode
+    }
+    
+    return render(request, 'myApp/technician_farmer_detail.html', context)
+
+
+@login_required
+def technician_activities(request):
+    """View all farmers' activities for technicians"""
+    if not request.user.is_technician():
+        messages.error(request, "Access denied. Technician only.")
+        return redirect("farmer_dashboard")
+    
+    # Get filter parameters
+    farmer_id = request.GET.get('farmer')
+    crop_id = request.GET.get('crop')
+    activity_type = request.GET.get('activity_type')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    # Base query
+    activities = Activity.objects.select_related('farmer', 'crop').order_by('-date')
+    
+    # Apply filters
+    if farmer_id:
+        activities = activities.filter(farmer_id=farmer_id)
+    if crop_id:
+        activities = activities.filter(crop_id=crop_id)
+    if activity_type:
+        activities = activities.filter(activity_type=activity_type)
+    if date_from:
+        activities = activities.filter(date__gte=date_from)
+    if date_to:
+        activities = activities.filter(date__lte=date_to)
+    
+    # Pagination
+    paginator = Paginator(activities, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Get filter options
+    farmers = User.objects.filter(role='farmer').order_by('username')
+    crops = Crop.objects.all().order_by('name')
+    
+    context = {
+        'page_obj': page_obj,
+        'farmers': farmers,
+        'crops': crops,
+        'current_farmer_id': farmer_id,
+        'current_crop_id': crop_id,
+        'current_activity_type': activity_type,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, 'myApp/technician_activities.html', context)
+
+
+@login_required
+def technician_expenses(request):
+    """View all farmers' expenses for technicians"""
+    if not request.user.is_technician():
+        messages.error(request, "Access denied. Technician only.")
+        return redirect("farmer_dashboard")
+    
+    # Get filter parameters
+    farmer_id = request.GET.get('farmer')
+    crop_id = request.GET.get('crop')
+    expense_type = request.GET.get('expense_type')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    # Base query
+    expenses = Expense.objects.select_related('farmer', 'crop').order_by('-date')
+    
+    # Apply filters
+    if farmer_id:
+        expenses = expenses.filter(farmer_id=farmer_id)
+    if crop_id:
+        expenses = expenses.filter(crop_id=crop_id)
+    if expense_type:
+        expenses = expenses.filter(expense_type=expense_type)
+    if date_from:
+        expenses = expenses.filter(date__gte=date_from)
+    if date_to:
+        expenses = expenses.filter(date__lte=date_to)
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(expenses, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    total_expenses = expenses.aggregate(total=Sum('amount'))['total'] or 0
+    expenses_by_type = expenses.values('expense_type').annotate(
+        total=Sum('amount')
+    ).order_by('-total')
+    
+    # Get filter options
+    farmers = User.objects.filter(role='farmer').order_by('username')
+    crops = Crop.objects.all().order_by('name')
+    
+    context = {
+        'page_obj': page_obj,
+        'farmers': farmers,
+        'crops': crops,
+        'current_farmer_id': farmer_id,
+        'current_crop_id': crop_id,
+        'current_expense_type': expense_type,
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_expenses': total_expenses,
+        'expenses_by_type': expenses_by_type,
+    }
+    
+    return render(request, 'myApp/technician_expenses.html', context)
+
+
+@login_required
+def technician_forecasts(request):
+    """View all farmers' forecasts for technicians"""
+    if not request.user.is_technician():
+        messages.error(request, "Access denied. Technician only.")
+        return redirect("farmer_dashboard")
+    
+    # Get filter parameters
+    farmer_id = request.GET.get('farmer')
+    crop_id = request.GET.get('crop')
+    harvest_date_from = request.GET.get('harvest_date_from')
+    harvest_date_to = request.GET.get('harvest_date_to')
+    
+    # Base query
+    forecasts = Forecast.objects.select_related('farmer', 'crop').order_by('harvest_start')
+    
+    # Apply filters
+    if farmer_id:
+        forecasts = forecasts.filter(farmer_id=farmer_id)
+    if crop_id:
+        forecasts = forecasts.filter(crop_id=crop_id)
+    if harvest_date_from:
+        forecasts = forecasts.filter(harvest_start__gte=harvest_date_from)
+    if harvest_date_to:
+        forecasts = forecasts.filter(harvest_start__lte=harvest_date_to)
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(forecasts, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    total_forecasts = forecasts.count()
+    upcoming_count = forecasts.filter(harvest_start__gte=date.today()).count()
+    total_expected_yield = forecasts.aggregate(
+        total=Sum('expected_yield_kg')
+    )['total'] or 0
+    
+    # Get filter options
+    farmers = User.objects.filter(role='farmer').order_by('username')
+    crops = Crop.objects.all().order_by('name')
+    
+    context = {
+        'page_obj': page_obj,
+        'farmers': farmers,
+        'crops': crops,
+        'current_farmer_id': farmer_id,
+        'current_crop_id': crop_id,
+        'harvest_date_from': harvest_date_from,
+        'harvest_date_to': harvest_date_to,
+        'total_forecasts': total_forecasts,
+        'upcoming_count': upcoming_count,
+        'total_expected_yield': total_expected_yield,
+    }
+    
+    return render(request, 'myApp/technician_forecasts.html', context)

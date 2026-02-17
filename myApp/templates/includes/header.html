@@ -110,6 +110,25 @@
                         <a href="/admin/" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap" style="pointer-events: auto;">
                             Django Admin
                         </a>
+                    {% elif request.user.is_authenticated and request.user.role == 'technician' %}
+                        <a href="{% url 'technician_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/technician/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Dashboard
+                        </a>
+                        <a href="{% url 'technician_farmers' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/technician/farmers/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Farmers
+                        </a>
+                        <a href="{% url 'technician_activities' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/technician/activities/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Activities
+                        </a>
+                        <a href="{% url 'technician_expenses' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/technician/expenses/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Expenses
+                        </a>
+                        <a href="{% url 'technician_forecasts' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/technician/forecasts/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Forecasts
+                        </a>
+                        <a href="{% url 'crop_reference_guide' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/crop-reference/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Crop Guide
+                        </a>
                     {% else %}
                         <a href="{% url 'farmer_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                             Dashboard
@@ -260,6 +279,25 @@
                     </a>
                     <a href="/admin/" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors" onclick="closeMobileMenu()">
                         Django Admin
+                    </a>
+                {% elif request.user.is_authenticated and request.user.role == 'technician' %}
+                    <a href="{% url 'technician_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/technician/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Dashboard
+                    </a>
+                    <a href="{% url 'technician_farmers' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/technician/farmers/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Farmers
+                    </a>
+                    <a href="{% url 'technician_activities' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/technician/activities/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Activities
+                    </a>
+                    <a href="{% url 'technician_expenses' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/technician/expenses/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Expenses
+                    </a>
+                    <a href="{% url 'technician_forecasts' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/technician/forecasts/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Forecasts
+                    </a>
+                    <a href="{% url 'crop_reference_guide' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/crop-reference/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Crop Guide
                     </a>
                 {% else %}
                     <a href="{% url 'farmer_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">

@@ -86,4 +86,12 @@ urlpatterns = [
     path('crops/<int:pk>/update/', views.update_crop, name='update_crop'),
     path('crops/<int:pk>/delete/', views.delete_crop, name='delete_crop'),
 
+    # TECHNICIAN DASHBOARD
+    path('technician/dashboard/', views.technician_dashboard, name='technician_dashboard'),
+    path('technician/farmers/', views.technician_farmers, name='technician_farmers'),
+    path('technician/farmers/<int:farmer_id>/', views.technician_farmer_detail, name='technician_farmer_detail'),
+    path('technician/activities/', views.technician_activities, name='technician_activities'),
+    path('technician/expenses/', views.technician_expenses, name='technician_expenses'),
+    path('technician/forecasts/', views.technician_forecasts, name='technician_forecasts'),
+
 ]

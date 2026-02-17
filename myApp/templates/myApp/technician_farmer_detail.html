@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% block title %}{{ farmer.username }} | Technician View | Agrilog+{% endblock %}
+
+{% block content %}
+<div class="bg-green-50 min-h-screen py-6">
+    <div class="mx-auto max-w-5xl space-y-8 px-4">
+        
+        <!-- Header with Read-Only Badge -->
+        <section class="bg-white rounded-xl shadow px-6 py-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'technician_farmers' %}" class="text-gray-600 hover:text-gray-900">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                    </a>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-2xl font-bold text-green-800">
+                                {{ farmer.username }}'s Dashboard
+                            </h2>
+                            <span class="px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
+                                READ-ONLY
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Region: {{ farmer.region|default:"Not specified" }}
+                        </p>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-500">
+                    {% now "l, F j, Y" %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Statistics -->
+        <section class="grid gap-4 sm:grid-cols-3">
+            <div class="bg-white rounded-xl shadow px-5 py-5">
+                <div class="text-sm text-gray-600">Total Activities</div>
+                <div class="text-2xl font-bold text-green-800 mt-1">{{ total_activities }}</div>
+            </div>
+            <div class="bg-white rounded-xl shadow px-5 py-5">
+                <div class="text-sm text-gray-600">Total Expenses</div>
+                <div class="text-2xl font-bold text-green-800 mt-1">₱{{ total_expenses|floatformat:2 }}</div>
+            </div>
+            <div class="bg-white rounded-xl shadow px-5 py-5">
+                <div class="text-sm text-gray-600">Active Forecasts</div>
+                <div class="text-2xl font-bold text-green-800 mt-1">{{ forecasts|length }}</div>
+            </div>
+        </section>
+
+        <!-- Reminders & Forecasts -->
+        <section class="grid gap-4 sm:grid-cols-2">
+            <!-- Reminders (Read-Only) -->
+            <div class="bg-white rounded-xl shadow px-5 py-5">
+                <h3 class="text-lg font-semibold text-green-700 mb-3">🔔 Reminders</h3>
+                {% if reminders %}
+                <div class="space-y-2">
+                    {% for reminder in reminders %}
+                    <div class="border-l-2 border-green-500 pl-3 py-2">
+                        <div class="text-sm font-medium text-gray-900">{{ reminder.message }}</div>
+                        <div class="text-xs text-gray-500">{{ reminder.due_date|date:"M d, Y" }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400">No reminders.</p>
+                {% endif %}
+            </div>
+
+            <!-- Forecasts -->
+            <div class="bg-white rounded-xl shadow px-5 py-5">
+                <h3 class="text-lg font-semibold text-green-700 mb-3">🌾 Forecasts</h3>
+                {% if forecasts %}
+                <div class="space-y-3">
+                    {% for forecast in forecasts %}
+                    <div class="border-l-2 border-amber-500 pl-3 py-2">
+                        <div class="text-sm font-medium text-gray-900">{{ forecast.crop.name }}</div>
+                        <div class="text-xs text-gray-600">Expected: {{ forecast.expected_yield_kg|floatformat:0 }} kg</div>
+                        <div class="text-xs text-gray-500">Harvest: {{ forecast.harvest_start|date:"M d" }} - {{ forecast.harvest_end|date:"M d" }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400">No forecasts yet.</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Recent Activities -->
+        <section class="bg-white rounded-xl shadow px-6 py-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-green-700">📋 Recent Activities</h3>
+                <a href="{% url 'technician_activities' %}?farmer={{ farmer.id }}" class="text-sm text-blue-600 hover:text-blue-700">
+                    View All →
+                </a>
+            </div>
+            {% if recent_activities %}
+            <div class="space-y-3">
+                {% for activity in recent_activities %}
+                <div class="border-l-2 border-green-500 pl-3 py-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-gray-900">{{ activity.activity_type|title }}</span>
+                        <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">{{ activity.crop.name }}</span>
+                    </div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        {{ activity.area_ha|floatformat:2 }} ha • {{ activity.date|date:"M d, Y" }}
+                    </div>
+                    {% if activity.notes %}
+                    <div class="text-xs text-gray-500 mt-1">{{ activity.notes }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400">No activities yet.</p>
+            {% endif %}
+        </section>
+
+        <!-- Recent Expenses -->
+        <section class="bg-white rounded-xl shadow px-6 py-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-green-700">💰 Recent Expenses</h3>
+                <a href="{% url 'technician_expenses' %}?farmer={{ farmer.id }}" class="text-sm text-blue-600 hover:text-blue-700">
+                    View All →
+                </a>
+            </div>
+            {% if recent_expenses %}
+            <div class="space-y-3">
+                {% for expense in recent_expenses %}
+                <div class="border-l-2 border-red-500 pl-3 py-2">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">{{ expense.expense_type|title }}</div>
+                            <div class="text-xs text-gray-600">
+                                {% if expense.crop %}{{ expense.crop.name }} • {% endif %}{{ expense.date|date:"M d, Y" }}
+                            </div>
+                        </div>
+                        <div class="text-sm font-semibold text-red-600">₱{{ expense.amount|floatformat:2 }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400">No expenses yet.</p>
+            {% endif %}
+        </section>
+    </div>
+</div>
+{% endblock %}
+

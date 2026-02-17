@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}Forecasts | Technician | Agrilog+{% endblock %}
+
+{% block content %}
+<div class="bg-slate-50 min-h-screen py-6">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
+        
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm px-6 py-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'technician_dashboard' %}" class="text-slate-600 hover:text-slate-900">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">All Forecasts</h1>
+                        <p class="text-sm text-slate-600 mt-1">Monitor harvest forecasts across all farmers</p>
+                    </div>
+                </div>
+                <div class="text-sm text-slate-600">
+                    Total Expected: <span class="font-semibold text-green-600">{{ total_expected_yield|floatformat:0 }} kg</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-xl shadow-sm px-6 py-4">
+                <div class="text-xs font-medium text-slate-600">Total Forecasts</div>
+                <div class="mt-1 text-2xl font-bold text-blue-600">{{ total_forecasts }}</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm px-6 py-4">
+                <div class="text-xs font-medium text-slate-600">Upcoming Harvests</div>
+                <div class="mt-1 text-2xl font-bold text-green-600">{{ upcoming_count }}</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm px-6 py-4">
+                <div class="text-xs font-medium text-slate-600">Total Expected Yield</div>
+                <div class="mt-1 text-xl font-bold text-amber-600">{{ total_expected_yield|floatformat:0 }} kg</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-xl shadow-sm px-6 py-4">
+            <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Farmer</label>
+                    <select name="farmer" class="w-full border rounded px-3 py-2 text-sm">
+                        <option value="">All Farmers</option>
+                        {% for farmer in farmers %}
+                        <option value="{{ farmer.id }}" {% if current_farmer_id == farmer.id|stringformat:"s" %}selected{% endif %}>
+                            {{ farmer.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Crop</label>
+                    <select name="crop" class="w-full border rounded px-3 py-2 text-sm">
+                        <option value="">All Crops</option>
+                        {% for crop in crops %}
+                        <option value="{{ crop.id }}" {% if current_crop_id == crop.id|stringformat:"s" %}selected{% endif %}>
+                            {{ crop.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Harvest From</label>
+                    <input type="date" name="harvest_date_from" value="{{ harvest_date_from }}" class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Harvest To</label>
+                    <input type="date" name="harvest_date_to" value="{{ harvest_date_to }}" class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="sm:col-span-2 lg:col-span-4 flex gap-2">
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        Apply Filters
+                    </button>
+                    <a href="{% url 'technician_forecasts' %}" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50">
+                        Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Forecasts List -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-900">Forecasts</h2>
+            </div>
+            <div class="divide-y divide-slate-200">
+                {% for forecast in page_obj %}
+                <div class="px-6 py-4 hover:bg-slate-50">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-slate-900">{{ forecast.farmer.username }}</span>
+                                <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">{{ forecast.crop.name }}</span>
+                                {% if forecast.harvest_start >= date.today %}
+                                <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800">Upcoming</span>
+                                {% endif %}
+                            </div>
+                            <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <div class="text-xs text-slate-600">Expected Yield</div>
+                                    <div class="font-semibold text-slate-900">{{ forecast.expected_yield_kg|floatformat:0 }} kg</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-slate-600">Range</div>
+                                    <div class="text-slate-700">{{ forecast.yield_min_kg|floatformat:0 }} - {{ forecast.yield_max_kg|floatformat:0 }} kg</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-slate-600">Harvest Start</div>
+                                    <div class="text-slate-700">{{ forecast.harvest_start|date:"M d, Y" }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-slate-600">Harvest End</div>
+                                    <div class="text-slate-700">{{ forecast.harvest_end|date:"M d, Y" }}</div>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-xs text-slate-500">
+                                Planted: {{ forecast.forecast_date|date:"M d, Y" }}
+                            </div>
+                        </div>
+                        <a href="{% url 'technician_farmer_detail' forecast.farmer.id %}" 
+                           class="text-sm text-blue-600 hover:text-blue-700 ml-4">
+                            View Farmer →
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="px-6 py-8 text-center text-sm text-slate-500">
+                    No forecasts found.
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                <div class="text-sm text-slate-600">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </div>
+                <div class="flex gap-2">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if current_farmer_id %}&farmer={{ current_farmer_id }}{% endif %}{% if current_crop_id %}&crop={{ current_crop_id }}{% endif %}{% if harvest_date_from %}&harvest_date_from={{ harvest_date_from }}{% endif %}{% if harvest_date_to %}&harvest_date_to={{ harvest_date_to }}{% endif %}" 
+                       class="px-3 py-1 border rounded text-sm text-slate-700 hover:bg-slate-50">
+                        Previous
+                    </a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if current_farmer_id %}&farmer={{ current_farmer_id }}{% endif %}{% if current_crop_id %}&crop={{ current_crop_id }}{% endif %}{% if harvest_date_from %}&harvest_date_from={{ harvest_date_from }}{% endif %}{% if harvest_date_to %}&harvest_date_to={{ harvest_date_to }}{% endif %}" 
+                       class="px-3 py-1 border rounded text-sm text-slate-700 hover:bg-slate-50">
+                        Next
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
