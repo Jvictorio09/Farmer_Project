@@ -283,7 +283,45 @@ def planting_detail_view(request, pk):
 @login_required
 def expense_log_view(request):
     user = request.user
-    expenses = Expense.objects.filter(farmer=user).order_by("-date")
+    expenses = Expense.objects.filter(farmer=user)
+    
+    # Filtering functionality
+    crop_filter = request.GET.get('crop', '')
+    expense_type_filter = request.GET.get('expense_type', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Apply filters
+    if crop_filter:
+        expenses = expenses.filter(crop_id=crop_filter)
+    if expense_type_filter:
+        expenses = expenses.filter(expense_type=expense_type_filter)
+    if date_from:
+        expenses = expenses.filter(date__gte=date_from)
+    if date_to:
+        expenses = expenses.filter(date__lte=date_to)
+    
+    # Sorting functionality
+    sort_by = request.GET.get('sort', '-date')  # Default: newest first
+    
+    # Valid sort fields
+    valid_sort_fields = {
+        'date': 'date',
+        '-date': '-date',
+        'crop': 'crop__name',
+        '-crop': '-crop__name',
+        'type': 'expense_type',
+        '-type': '-expense_type',
+        'amount': 'amount',
+        '-amount': '-amount',
+        'description': 'description',
+        '-description': '-description',
+    }
+    
+    # Get the sort field or default to date descending
+    sort_field = valid_sort_fields.get(sort_by, '-date')
+    expenses = expenses.order_by(sort_field)
+    
     form = ExpenseForm()
 
     if request.method == "POST" and "add_expense" in request.POST:
@@ -292,14 +330,38 @@ def expense_log_view(request):
             obj = form.save(commit=False)
             obj.farmer = user
             obj.save()
-            return redirect("expense_log")
+            # Preserve filters and sort when redirecting
+            redirect_url = "expense_log"
+            query_params = []
+            if sort_by != '-date':
+                query_params.append(f'sort={sort_by}')
+            if crop_filter:
+                query_params.append(f'crop={crop_filter}')
+            if expense_type_filter:
+                query_params.append(f'expense_type={expense_type_filter}')
+            if date_from:
+                query_params.append(f'date_from={date_from}')
+            if date_to:
+                query_params.append(f'date_to={date_to}')
+            if query_params:
+                redirect_url += '?' + '&'.join(query_params)
+            return redirect(redirect_url)
 
     total = expenses.aggregate(Sum("amount"))["amount__sum"] or 0
+    
+    # Get all crops for filter dropdown
+    crops = Crop.objects.all().order_by('name')
 
     return render(request, "myApp/expense_log.html", {
         "expenses": expenses,
         "form": form,
         "total": total,
+        "current_sort": sort_by,
+        "crops": crops,
+        "current_crop_filter": crop_filter,
+        "current_expense_type_filter": expense_type_filter,
+        "date_from": date_from,
+        "date_to": date_to,
     })
 
 
@@ -405,6 +467,24 @@ def delete_activity(request, pk):
 @login_required
 def update_expense(request, pk):
     expense = get_object_or_404(Expense, pk=pk, farmer=request.user)
+    
+    # Get current sort parameters
+    sort_by = request.GET.get('sort', '-date')
+    valid_sort_fields = {
+        'date': 'date',
+        '-date': '-date',
+        'crop': 'crop__name',
+        '-crop': '-crop__name',
+        'type': 'expense_type',
+        '-type': '-expense_type',
+        'amount': 'amount',
+        '-amount': '-amount',
+        'description': 'description',
+        '-description': '-description',
+    }
+    sort_field = valid_sort_fields.get(sort_by, '-date')
+    expenses = Expense.objects.filter(farmer=request.user).order_by(sort_field)
+    
     if request.method == "POST":
         form = ExpenseForm(request.POST, instance=expense)
         if form.is_valid():
@@ -414,7 +494,11 @@ def update_expense(request, pk):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({"success": True, "message": "Expense updated successfully."})
             messages.success(request, "Expense updated successfully.")
-            return redirect("expense_log")
+            # Preserve sort parameter in redirect
+            redirect_url = "expense_log"
+            if sort_by != '-date':
+                redirect_url += f"?sort={sort_by}"
+            return redirect(redirect_url)
         else:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({"success": False, "errors": form.errors}, status=400)
@@ -430,11 +514,13 @@ def update_expense(request, pk):
                 "description": expense.description or "",
             })
     form = ExpenseForm(instance=expense)
+    total = expenses.aggregate(Sum("amount"))["amount__sum"] or 0
     return render(request, "myApp/expense_log.html", {
         "form": form,
         "edit_expense": expense,
-        "expenses": Expense.objects.filter(farmer=request.user).order_by("-date"),
-        "total": Expense.objects.filter(farmer=request.user).aggregate(Sum("amount"))["amount__sum"] or 0,
+        "expenses": expenses,
+        "total": total,
+        "current_sort": sort_by,
     })
 
 
@@ -446,7 +532,12 @@ def delete_expense(request, pk):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({"success": True, "message": "Expense deleted."})
         messages.success(request, "Expense deleted.")
-        return redirect("expense_log")
+        # Preserve sort parameter in redirect
+        sort_by = request.GET.get('sort', '-date')
+        redirect_url = "expense_log"
+        if sort_by != '-date':
+            redirect_url += f"?sort={sort_by}"
+        return redirect(redirect_url)
     return redirect("expense_log")
 
 

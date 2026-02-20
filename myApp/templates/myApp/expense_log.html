@@ -56,17 +56,160 @@
 
     <!-- Expense Table -->
     <section class="space-y-4">
-        <h3 class="text-lg font-semibold text-gray-800">📄 Expense Records</h3>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h3 class="text-lg font-semibold text-gray-800">📄 Expense Records</h3>
+            
+            <!-- Filter Dropdowns -->
+            <form method="get" class="flex flex-wrap items-center gap-3">
+                <!-- Preserve sort parameter -->
+                {% if current_sort %}
+                <input type="hidden" name="sort" value="{{ current_sort }}">
+                {% endif %}
+                
+                <!-- Crop Filter -->
+                <div>
+                    <select name="crop" onchange="this.form.submit()" class="border rounded px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="">All Crops</option>
+                        {% for crop in crops %}
+                        <option value="{{ crop.id }}" {% if current_crop_filter == crop.id|stringformat:"s" %}selected{% endif %}>
+                            {{ crop.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Expense Type Filter -->
+                <div>
+                    <select name="expense_type" onchange="this.form.submit()" class="border rounded px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="">All Types</option>
+                        <option value="seed" {% if current_expense_type_filter == "seed" %}selected{% endif %}>Seed</option>
+                        <option value="fertilizer" {% if current_expense_type_filter == "fertilizer" %}selected{% endif %}>Fertilizer</option>
+                        <option value="labor" {% if current_expense_type_filter == "labor" %}selected{% endif %}>Labor</option>
+                        <option value="pesticide" {% if current_expense_type_filter == "pesticide" %}selected{% endif %}>Pesticide</option>
+                        <option value="fuel" {% if current_expense_type_filter == "fuel" %}selected{% endif %}>Fuel</option>
+                        <option value="other" {% if current_expense_type_filter == "other" %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                
+                <!-- Date From -->
+                <div>
+                    <input type="date" name="date_from" value="{{ date_from }}" onchange="this.form.submit()" placeholder="From Date" class="border rounded px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <!-- Date To -->
+                <div>
+                    <input type="date" name="date_to" value="{{ date_to }}" onchange="this.form.submit()" placeholder="To Date" class="border rounded px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                
+                <!-- Clear Filters Button -->
+                {% if current_crop_filter or current_expense_type_filter or date_from or date_to %}
+                <a href="{% url 'expense_log' %}{% if current_sort != '-date' %}?sort={{ current_sort }}{% endif %}" 
+                   class="px-3 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50">
+                    Clear Filters
+                </a>
+                {% endif %}
+            </form>
+        </div>
 
         <div class="bg-white shadow-sm rounded-lg p-4 border overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-gray-100">
                     <tr>
-                        <th class="px-4 py-2 text-left">Date</th>
-                        <th class="px-4 py-2 text-left">Crop</th>
-                        <th class="px-4 py-2 text-left">Type</th>
-                        <th class="px-4 py-2 text-left">Description</th>
-                        <th class="px-4 py-2 text-right">Amount</th>
+                        <th class="px-4 py-2 text-left">
+                            <a href="?sort={% if current_sort == 'date' or current_sort == '' %}-date{% else %}date{% endif %}{% if current_crop_filter %}&crop={{ current_crop_filter }}{% endif %}{% if current_expense_type_filter %}&expense_type={{ current_expense_type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" 
+                               class="flex items-center gap-1 hover:text-green-700 cursor-pointer transition-colors">
+                                Date
+                                {% if current_sort == 'date' %}
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                    </svg>
+                                {% elif current_sort == '-date' or current_sort == '' %}
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                {% else %}
+                                    <svg class="w-4 h-4 text-gray-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                    </svg>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-4 py-2 text-left">
+                            <a href="?sort={% if current_sort == 'crop' %}-crop{% else %}crop{% endif %}{% if current_crop_filter %}&crop={{ current_crop_filter }}{% endif %}{% if current_expense_type_filter %}&expense_type={{ current_expense_type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" 
+                               class="flex items-center gap-1 hover:text-green-700 cursor-pointer">
+                                Crop
+                                {% if current_sort == 'crop' %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                    </svg>
+                                {% elif current_sort == '-crop' %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                {% else %}
+                                    <svg class="w-4 h-4 text-gray-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                    </svg>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-4 py-2 text-left">
+                            <a href="?sort={% if current_sort == 'type' %}-type{% else %}type{% endif %}{% if current_crop_filter %}&crop={{ current_crop_filter }}{% endif %}{% if current_expense_type_filter %}&expense_type={{ current_expense_type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" 
+                               class="flex items-center gap-1 hover:text-green-700 cursor-pointer">
+                                Type
+                                {% if current_sort == 'type' %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                    </svg>
+                                {% elif current_sort == '-type' %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                {% else %}
+                                    <svg class="w-4 h-4 text-gray-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                    </svg>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-4 py-2 text-left">
+                            <a href="?sort={% if current_sort == 'description' %}-description{% else %}description{% endif %}{% if current_crop_filter %}&crop={{ current_crop_filter }}{% endif %}{% if current_expense_type_filter %}&expense_type={{ current_expense_type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" 
+                               class="flex items-center gap-1 hover:text-green-700 cursor-pointer">
+                                Description
+                                {% if current_sort == 'description' %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                    </svg>
+                                {% elif current_sort == '-description' %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                {% else %}
+                                    <svg class="w-4 h-4 text-gray-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                    </svg>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th class="px-4 py-2 text-right">
+                            <a href="?sort={% if current_sort == 'amount' %}-amount{% else %}amount{% endif %}{% if current_crop_filter %}&crop={{ current_crop_filter }}{% endif %}{% if current_expense_type_filter %}&expense_type={{ current_expense_type_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" 
+                               class="flex items-center justify-end gap-1 hover:text-green-700 cursor-pointer">
+                                Amount
+                                {% if current_sort == 'amount' %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                    </svg>
+                                {% elif current_sort == '-amount' %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                {% else %}
+                                    <svg class="w-4 h-4 text-gray-400 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                    </svg>
+                                {% endif %}
+                            </a>
+                        </th>
                         <th class="px-4 py-2 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -167,6 +310,10 @@
     
     function openEditExpenseModal(expenseId) {
         currentExpenseId = expenseId;
+        // Get current sort parameter from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sortParam = urlParams.get('sort') || '-date';
+        
         // Fetch expense data
         fetch(`/expenses/${expenseId}/update/`, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
@@ -190,7 +337,10 @@
             document.getElementById('edit_expense_date').value = data.date;
             document.getElementById('edit_expense_description').value = data.description || '';
             
-            document.getElementById('editExpenseForm').action = `/expenses/${expenseId}/update/`;
+            // Store sort parameter in form data
+            const form = document.getElementById('editExpenseForm');
+            form.action = `/expenses/${expenseId}/update/`;
+            form.dataset.sort = sortParam;
             document.getElementById('editExpenseModal').classList.remove('hidden');
         })
         .catch(error => {
@@ -210,7 +360,22 @@
         const formData = new FormData(this);
         formData.append('X-Requested-With', 'XMLHttpRequest');
         
-        fetch(this.action, {
+        // Get all query parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sortParam = this.dataset.sort || urlParams.get('sort') || '-date';
+        
+        // Build query string with all filters and sort
+        const queryParams = new URLSearchParams();
+        if (sortParam !== '-date') queryParams.set('sort', sortParam);
+        if (urlParams.get('crop')) queryParams.set('crop', urlParams.get('crop'));
+        if (urlParams.get('expense_type')) queryParams.set('expense_type', urlParams.get('expense_type'));
+        if (urlParams.get('date_from')) queryParams.set('date_from', urlParams.get('date_from'));
+        if (urlParams.get('date_to')) queryParams.set('date_to', urlParams.get('date_to'));
+        
+        const queryString = queryParams.toString();
+        const urlWithParams = this.action + (queryString ? `?${queryString}` : '');
+        
+        fetch(urlWithParams, {
             method: 'POST',
             body: formData,
             headers: {'X-Requested-With': 'XMLHttpRequest'}
@@ -219,7 +384,9 @@
         .then(data => {
             if (data.success) {
                 closeEditExpenseModal();
-                location.reload(); // Reload to show updated data
+                // Reload with all parameters preserved
+                const reloadUrl = window.location.pathname + (queryString ? `?${queryString}` : '');
+                window.location.href = reloadUrl;
             } else {
                 alert('Error: ' + (data.message || 'Failed to update expense'));
             }
@@ -232,7 +399,13 @@
     
     function openDeleteExpenseModal(expenseId) {
         currentExpenseId = expenseId;
-        document.getElementById('deleteExpenseForm').action = `/expenses/${expenseId}/delete/`;
+        // Get current sort parameter from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sortParam = urlParams.get('sort') || '-date';
+        
+        const form = document.getElementById('deleteExpenseForm');
+        form.action = `/expenses/${expenseId}/delete/`;
+        form.dataset.sort = sortParam;
         document.getElementById('deleteExpenseModal').classList.remove('hidden');
     }
     
@@ -247,7 +420,22 @@
         const formData = new FormData(this);
         formData.append('X-Requested-With', 'XMLHttpRequest');
         
-        fetch(this.action, {
+        // Get all query parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sortParam = this.dataset.sort || urlParams.get('sort') || '-date';
+        
+        // Build query string with all filters and sort
+        const queryParams = new URLSearchParams();
+        if (sortParam !== '-date') queryParams.set('sort', sortParam);
+        if (urlParams.get('crop')) queryParams.set('crop', urlParams.get('crop'));
+        if (urlParams.get('expense_type')) queryParams.set('expense_type', urlParams.get('expense_type'));
+        if (urlParams.get('date_from')) queryParams.set('date_from', urlParams.get('date_from'));
+        if (urlParams.get('date_to')) queryParams.set('date_to', urlParams.get('date_to'));
+        
+        const queryString = queryParams.toString();
+        const urlWithParams = this.action + (queryString ? `?${queryString}` : '');
+        
+        fetch(urlWithParams, {
             method: 'POST',
             body: formData,
             headers: {'X-Requested-With': 'XMLHttpRequest'}
@@ -256,7 +444,9 @@
         .then(data => {
             if (data.success) {
                 closeDeleteExpenseModal();
-                location.reload(); // Reload to show updated data
+                // Reload with all parameters preserved
+                const reloadUrl = window.location.pathname + (queryString ? `?${queryString}` : '');
+                window.location.href = reloadUrl;
             } else {
                 alert('Error: ' + (data.message || 'Failed to delete expense'));
             }
