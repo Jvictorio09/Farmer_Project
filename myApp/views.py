@@ -351,6 +351,53 @@ def expense_log_view(request):
     
     # Get all crops for filter dropdown
     crops = Crop.objects.all().order_by('name')
+    
+    # Calculate expense breakdown by type when a crop is selected
+    expense_breakdown = None
+    selected_crop_name = None
+    if crop_filter:
+        # Get the selected crop name
+        try:
+            selected_crop = Crop.objects.get(id=crop_filter)
+            selected_crop_name = selected_crop.name
+        except Crop.DoesNotExist:
+            selected_crop_name = None
+        
+        # Calculate breakdown by expense type for the selected crop
+        breakdown_data = expenses.values('expense_type').annotate(
+            total_amount=Sum('amount')
+        ).order_by('expense_type')
+        
+        # Convert to list of dictionaries for easier template usage
+        expense_breakdown = []
+        
+        # Color mapping for expense types
+        color_map = {
+            'seed': '#10B981',      # green
+            'fertilizer': '#3B82F6', # blue
+            'labor': '#F59E0B',      # amber
+            'pesticide': '#EF4444',  # red
+            'fuel': '#8B5CF6',      # purple
+            'other': '#6B7280',     # gray
+        }
+        
+        # Type display names
+        type_display = {
+            'seed': 'Seed',
+            'fertilizer': 'Fertilizer',
+            'labor': 'Labor',
+            'pesticide': 'Pesticide',
+            'fuel': 'Fuel',
+            'other': 'Other',
+        }
+        
+        for item in breakdown_data:
+            expense_type = item['expense_type']
+            expense_breakdown.append({
+                'label': type_display.get(expense_type, expense_type.title()),
+                'amount': float(item['total_amount']),
+                'color': color_map.get(expense_type, '#6B7280')
+            })
 
     return render(request, "myApp/expense_log.html", {
         "expenses": expenses,
@@ -362,6 +409,8 @@ def expense_log_view(request):
         "current_expense_type_filter": expense_type_filter,
         "date_from": date_from,
         "date_to": date_to,
+        "expense_breakdown": expense_breakdown,
+        "selected_crop_name": selected_crop_name,
     })
 
 
