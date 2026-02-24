@@ -1224,9 +1224,25 @@ def admin_dashboard(request):
     
     # Forecasts statistics
     total_forecasts = Forecast.objects.count()
-    upcoming_harvests = Forecast.objects.filter(
-        harvest_start__gte=date.today()
-    ).count()
+    
+    # Upcoming harvests (for notification bell in header)
+    # Format similar to context processor for consistency
+    today = date.today()
+    five_days_from_now = today + timedelta(days=5)
+    forecasts = Forecast.objects.filter(
+        harvest_start__gte=today,
+        harvest_start__lte=five_days_from_now
+    ).select_related('crop', 'farmer').order_by('harvest_start')[:10]
+    
+    upcoming_harvests = []
+    for forecast in forecasts:
+        days_until = (forecast.harvest_start - today).days
+        upcoming_harvests.append({
+            'crop': forecast.crop.name if forecast.crop else 'Unknown',
+            'harvest_start': forecast.harvest_start,
+            'days_until': days_until,
+            'forecast': forecast,
+        })
     
     context = {
         'farmers': farmers,
@@ -1242,6 +1258,7 @@ def admin_dashboard(request):
         'total_expenses': total_expenses,
         'total_forecasts': total_forecasts,
         'upcoming_harvests': upcoming_harvests,
+        'has_upcoming_harvests': len(upcoming_harvests) > 0,
     }
     
     return render(request, 'myApp/admin_dashboard.html', context)

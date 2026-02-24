@@ -107,9 +107,6 @@
                         <a href="{% url 'admin_create_user' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/admin/create-user/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                             Create User
                         </a>
-                        <a href="/admin/" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap" style="pointer-events: auto;">
-                            Django Admin
-                        </a>
                     {% elif request.user.is_authenticated and request.user.role == 'technician' %}
                         <a href="{% url 'technician_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/technician/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                             Dashboard
@@ -276,9 +273,6 @@
                     </a>
                     <a href="{% url 'admin_create_user' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/admin/create-user/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
                         Create User
-                    </a>
-                    <a href="/admin/" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors" onclick="closeMobileMenu()">
-                        Django Admin
                     </a>
                 {% elif request.user.is_authenticated and request.user.role == 'technician' %}
                     <a href="{% url 'technician_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/technician/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
