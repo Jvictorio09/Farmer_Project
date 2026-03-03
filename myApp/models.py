@@ -31,6 +31,15 @@ class User(AbstractUser):
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='farmer')
     region = models.CharField(max_length=100, blank=True)
+    assigned_admin = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_farmers',
+        limit_choices_to={'role': 'admin'},
+        help_text="Select the admin who will manage this farmer"
+    )
 
     def is_farmer(self): return self.role == 'farmer'
     def is_technician(self): return self.role == 'technician'

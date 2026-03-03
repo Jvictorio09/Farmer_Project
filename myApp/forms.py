@@ -14,9 +14,28 @@ from .models import (
 # ======================
 
 class CustomUserCreationForm(UserCreationForm):
+    assigned_admin = forms.ModelChoiceField(
+        queryset=User.objects.filter(role='admin').order_by('username'),
+        required=False,
+        empty_label="-- Select Admin (Optional) --",
+        help_text="Select which admin will manage this farmer (only for farmers)"
+    )
+    
     class Meta:
         model = User
-        fields = ['username', 'email', 'role', 'region']
+        fields = ['username', 'email', 'role', 'region', 'assigned_admin']
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        role = cleaned_data.get('role')
+        assigned_admin = cleaned_data.get('assigned_admin')
+        
+        # Only require/admin assignment for farmers
+        if role != 'farmer' and assigned_admin:
+            # Clear assigned_admin if role is not farmer
+            cleaned_data['assigned_admin'] = None
+        
+        return cleaned_data
 
 
 # ======================

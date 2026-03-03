@@ -1176,27 +1176,34 @@ def chart_expenses_by_crop(request):
 
 @login_required
 def admin_dashboard(request):
-    """Admin dashboard showing all farmers and system stats"""
+    """Admin dashboard showing assigned farmers and system stats"""
     if not request.user.is_admin():
         messages.error(request, "Access denied. Admin only.")
         return redirect("farmer_dashboard")
     
-    # Get all farmers
-    farmers = User.objects.filter(role='farmer').order_by('-date_joined')
+    # Get only farmers assigned to this admin
+    farmers = User.objects.filter(role='farmer', assigned_admin=request.user).order_by('-date_joined')
     
-    # System-wide statistics
-    total_farmers = User.objects.filter(role='farmer').count()
+    # Statistics for assigned farmers only
+    total_farmers = farmers.count()
     total_technicians = User.objects.filter(role='technician').count()
     total_admins = User.objects.filter(role='admin').count()
     
-    # Crop statistics
-    total_activities = Activity.objects.count()
-    total_plantings = Activity.objects.filter(activity_type='planting').count()
-    total_crops = Crop.objects.count()
+    # Get assigned farmer IDs for filtering
+    assigned_farmer_ids = farmers.values_list('id', flat=True)
     
-    # Get crops planted by farmers (with counts)
+    # Crop statistics (only for assigned farmers)
+    total_activities = Activity.objects.filter(farmer_id__in=assigned_farmer_ids).count()
+    total_plantings = Activity.objects.filter(
+        activity_type='planting',
+        farmer_id__in=assigned_farmer_ids
+    ).count()
+    total_crops = Crop.objects.count()  # Total crops available in system
+    
+    # Get crops planted by assigned farmers (with counts)
     crops_planted = Activity.objects.filter(
-        activity_type='planting'
+        activity_type='planting',
+        farmer_id__in=assigned_farmer_ids
     ).values(
         'crop__name'
     ).annotate(
@@ -1204,32 +1211,41 @@ def admin_dashboard(request):
         total_area=Sum('area_ha')
     ).order_by('-count')[:10]
     
-    # Get farmers with most activities
-    top_farmers = Activity.objects.values(
+    # Get assigned farmers with most activities
+    top_farmers = Activity.objects.filter(
+        farmer_id__in=assigned_farmer_ids
+    ).values(
         'farmer__username',
         'farmer__region'
     ).annotate(
         activity_count=Count('id')
     ).order_by('-activity_count')[:10]
     
-    # Get recent activities
-    recent_activities = Activity.objects.select_related(
+    # Get recent activities from assigned farmers
+    recent_activities = Activity.objects.filter(
+        farmer_id__in=assigned_farmer_ids
+    ).select_related(
         'farmer', 'crop'
     ).order_by('-date')[:10]
     
-    # Total expenses
-    total_expenses = Expense.objects.aggregate(
+    # Total expenses from assigned farmers
+    total_expenses = Expense.objects.filter(
+        farmer_id__in=assigned_farmer_ids
+    ).aggregate(
         total=Sum('amount')
     )['total'] or 0
     
-    # Forecasts statistics
-    total_forecasts = Forecast.objects.count()
+    # Forecasts statistics for assigned farmers
+    total_forecasts = Forecast.objects.filter(
+        farmer_id__in=assigned_farmer_ids
+    ).count()
     
-    # Upcoming harvests (for notification bell in header)
+    # Upcoming harvests (for notification bell in header) - only for assigned farmers
     # Format similar to context processor for consistency
     today = date.today()
     five_days_from_now = today + timedelta(days=5)
     forecasts = Forecast.objects.filter(
+        farmer_id__in=assigned_farmer_ids,
         harvest_start__gte=today,
         harvest_start__lte=five_days_from_now
     ).select_related('crop', 'farmer').order_by('harvest_start')[:10]
