@@ -42,6 +42,8 @@ def _create_users():
         dict(username="farmer_carlos", email="carlos@Agriplus.demo", role="farmer", first_name="Carlos", region="Laguna"),
     ]
     created = []
+    admin_user = None
+    
     for entry in users:
         user, is_new = User.objects.update_or_create(
             username=entry["username"],
@@ -60,8 +62,24 @@ def _create_users():
         user.is_active = True
         user.is_staff = entry["role"] == "admin"
         user.save()  # Save all fields
+        
+        # Store admin user for later assignment
+        if entry["role"] == "admin":
+            admin_user = user
+        
         if is_new:
             created.append(user.username)
+    
+    # Assign all farmers to the admin user
+    if admin_user:
+        farmers = User.objects.filter(role='farmer')
+        assigned_count = 0
+        for farmer in farmers:
+            farmer.assigned_admin = admin_user
+            farmer.save()
+            assigned_count += 1
+        print(f"✅ Assigned {assigned_count} farmer(s) to admin")
+    
     return created
 
 

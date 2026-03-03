@@ -1182,7 +1182,11 @@ def admin_dashboard(request):
         return redirect("farmer_dashboard")
     
     # Get only farmers assigned to this admin
-    farmers = User.objects.filter(role='farmer', assigned_admin=request.user).order_by('-date_joined')
+    # Explicitly filter by the current admin's ID to ensure no other admins' farmers show up
+    farmers = User.objects.filter(
+        role='farmer',
+        assigned_admin__id=request.user.id
+    ).exclude(assigned_admin__isnull=True).order_by('-date_joined')
     
     # Statistics for assigned farmers only
     total_farmers = farmers.count()
@@ -1190,7 +1194,11 @@ def admin_dashboard(request):
     total_admins = User.objects.filter(role='admin').count()
     
     # Get assigned farmer IDs for filtering
-    assigned_farmer_ids = farmers.values_list('id', flat=True)
+    assigned_farmer_ids = list(farmers.values_list('id', flat=True))
+    
+    # If no farmers assigned, use empty list to return empty results
+    if not assigned_farmer_ids:
+        assigned_farmer_ids = [-1]  # Use -1 (non-existent ID) to return empty queryset
     
     # Crop statistics (only for assigned farmers)
     total_activities = Activity.objects.filter(farmer_id__in=assigned_farmer_ids).count()
