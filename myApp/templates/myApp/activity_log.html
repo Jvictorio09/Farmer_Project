@@ -291,7 +291,7 @@
               value="{{ crop.id }}"
               data-name="{{ crop.name }}"
               data-seasons="{{ crop.ideal_seasons|default:'' }}"
-              data-description="{{ crop.description|escapejs|default:'' }}"
+              data-description="{{ crop.description|force_escape|default:'' }}"
               data-seedmin="{{ crop.seed_rate_min_kg|default_if_none:'' }}"
               data-seedmax="{{ crop.seed_rate_max_kg|default_if_none:'' }}"
               data-fertmin="{{ crop.fert_sacks_min|default_if_none:'' }}"
