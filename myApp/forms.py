@@ -69,6 +69,24 @@ class ActivityForm(forms.ModelForm):
             'spacing': forms.TextInput(attrs={'placeholder': 'e.g., 20x20 cm'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # For watering/harvesting, planting fields are optional (section is hidden)
+        if self.data.get('activity_type') in ('watering', 'harvesting'):
+            self.fields['area_ha'].required = False
+            self.fields['area_ha'].initial = 1.0
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned:
+            return cleaned
+        activity_type = cleaned.get('activity_type')
+        if activity_type in ('watering', 'harvesting'):
+            # Use defaults for planting fields when they're empty
+            if not cleaned.get('area_ha') and cleaned.get('area_ha') != 0:
+                cleaned['area_ha'] = 1.0
+        return cleaned
+
 
 # ======================
 # 🌱 CROP FORM
