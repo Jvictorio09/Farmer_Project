@@ -13,7 +13,7 @@ django.setup()
 
 from myApp.models import User
 
-DEMO_USERS = ["admin", "tech_ana", "farmer_ben", "farmer_rosa", "farmer_carlos"]
+DEMO_USERS = ["superadmin", "admin", "tech_ana", "farmer_ben", "farmer_rosa", "farmer_carlos"]
 FARMER_USERS = ["farmer_ben", "farmer_rosa", "farmer_carlos"]
 PASSWORD = "demo12345"
 
@@ -23,8 +23,11 @@ for username in DEMO_USERS:
         user = User.objects.get(username=username)
         user.set_password(PASSWORD)
         user.is_active = True
-        if username == "admin":
+        user.approval_status = "approved"
+        if username in {"admin", "superadmin"}:
             user.is_staff = True
+        if username == "superadmin":
+            user.is_superuser = True
         user.save()
         print(f"✅ Reset password for {username}")
     except User.DoesNotExist:

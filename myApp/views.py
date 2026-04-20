@@ -1,13 +1,19 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.db.models import Sum, Count
 from django.db.models.functions import TruncMonth
 from django.core.paginator import Paginator
+from django.core.mail import send_mail
+from django.core import signing
+from django.core.signing import BadSignature, SignatureExpired
+from django.conf import settings
 from datetime import date, timedelta
+import random
 import csv
 import calendar
 from io import BytesIO
@@ -34,16 +40,153 @@ from .models import (
 # 🔐 AUTH
 # =====================================================
 
+class ApprovalLoginView(LoginView):
+    """Custom login that blocks users still waiting for Super Admin approval."""
+
+    def form_valid(self, form):
+        user = form.get_user()
+        if user.is_super_admin():
+            # Super admins must never be blocked by approval flow.
+            update_fields = []
+            if user.role != 'super_admin':
+                user.role = 'super_admin'
+                update_fields.append('role')
+            if user.approval_status != 'approved':
+                user.approval_status = 'approved'
+                update_fields.append('approval_status')
+            if not user.is_active:
+                user.is_active = True
+                update_fields.append('is_active')
+            if user.approved_at is None:
+                user.approved_at = timezone.now()
+                update_fields.append('approved_at')
+            if update_fields:
+                user.save(update_fields=update_fields)
+            return super().form_valid(form)
+
+        if user.approval_status != 'approved':
+            messages.error(
+                self.request,
+                "Your account is pending Super Admin approval. Please wait for confirmation.",
+            )
+            return redirect("login")
+        return super().form_valid(form)
+
+
+def notify_super_admins_of_registration(user):
+    """Send an email alert to all approved Super Admins for review."""
+    recipients = list(
+        User.objects.filter(
+            role='super_admin',
+            approval_status='approved',
+        )
+        .exclude(email='')
+        .values_list('email', flat=True)
+    )
+    if not recipients:
+        return
+
+    send_mail(
+        subject="New account pending Super Admin approval",
+        message=(
+            "A new account has registered and is waiting for approval.\n\n"
+            f"Username: {user.username}\n"
+            f"Email: {user.email or 'N/A'}\n"
+            f"Role: {user.get_role_display()}\n"
+            f"Region: {user.region or 'N/A'}\n"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=recipients,
+        fail_silently=True,
+    )
+
+
+def generate_registration_captcha():
+    left = random.randint(1, 9)
+    right = random.randint(1, 9)
+    answer = left + right
+    token = signing.dumps(
+        {"left": left, "right": right, "answer": answer},
+        salt="registration-captcha",
+    )
+    return f"What is {left} + {right}?", str(answer), token
+
+
+def parse_registration_captcha(token):
+    try:
+        payload = signing.loads(token, salt="registration-captcha", max_age=900)
+    except (BadSignature, SignatureExpired):
+        return None, None
+
+    left = payload.get("left")
+    right = payload.get("right")
+    answer = payload.get("answer")
+    if left is None or right is None or answer is None:
+        return None, None
+
+    return f"What is {left} + {right}?", str(answer)
+
+
 def register_view(request):
     if request.method == "POST":
-        form = CustomUserCreationForm(request.POST)
+        captcha_token = request.POST.get("captcha_token", "")
+        captcha_prompt, captcha_expected = parse_registration_captcha(captcha_token)
+        captcha_expired = captcha_prompt is None or captcha_expected is None
+
+        if captcha_expired:
+            # If token is missing/expired/invalid, rotate to a fresh challenge
+            # and force user to answer the new one.
+            captcha_prompt, captcha_expected, captcha_token = generate_registration_captcha()
+            form_data = request.POST.copy()
+            form_data["captcha"] = ""
+        else:
+            form_data = request.POST
+
+        form = CustomUserCreationForm(
+            form_data,
+            require_captcha=True,
+            captcha_prompt=f"CAPTCHA: {captcha_prompt}",
+            captcha_expected=captcha_expected,
+        )
+
+        if captcha_expired:
+            form.is_valid()
+            form.add_error("captcha", "CAPTCHA expired. Please answer the new challenge.")
+            form.fields["captcha"].label = f"CAPTCHA: {captcha_prompt}"
+            return render(request, "auth/register.html", {"form": form, "captcha_token": captcha_token})
+
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect("home")  # Use role_redirect_view to handle role-based routing
+            user = form.save(commit=False)
+            user.approval_status = 'pending'
+            user.is_active = True
+            user.save()
+            notify_super_admins_of_registration(user)
+            messages.success(
+                request,
+                "Registration submitted. A Super Admin will review your account before you can log in.",
+            )
+            return redirect("login")
+        captcha_has_error = "captcha" in form.errors
+        if captcha_has_error:
+            captcha_prompt, captcha_expected, captcha_token = generate_registration_captcha()
+            form.fields["captcha"].label = f"CAPTCHA: {captcha_prompt}"
+            # Prevent stale answers from being re-submitted accidentally.
+            mutable_data = form.data.copy()
+            mutable_data["captcha"] = ""
+            mutable_data["captcha_token"] = captcha_token
+            form.data = mutable_data
+        else:
+            if captcha_prompt is None:
+                captcha_prompt, captcha_expected, captcha_token = generate_registration_captcha()
+            form.fields["captcha"].label = f"CAPTCHA: {captcha_prompt}"
     else:
-        form = CustomUserCreationForm()
-    return render(request, "auth/register.html", {"form": form})
+        captcha_prompt, captcha_expected, captcha_token = generate_registration_captcha()
+        form = CustomUserCreationForm(
+            require_captcha=True,
+            captcha_prompt=f"CAPTCHA: {captcha_prompt}",
+            captcha_expected=captcha_expected,
+        )
+    return render(request, "auth/register.html", {"form": form, "captcha_token": captcha_token})
 
 
 def logout_view(request):
@@ -55,7 +198,30 @@ def role_redirect_view(request):
     if not request.user.is_authenticated:
         return redirect("login")
 
-    if request.user.role == "admin":
+    if request.user.is_super_admin():
+        update_fields = []
+        if request.user.role != 'super_admin':
+            request.user.role = 'super_admin'
+            update_fields.append('role')
+        if request.user.approval_status != 'approved':
+            request.user.approval_status = 'approved'
+            update_fields.append('approval_status')
+        if request.user.approved_at is None:
+            request.user.approved_at = timezone.now()
+            update_fields.append('approved_at')
+        if update_fields:
+            request.user.save(update_fields=update_fields)
+        return redirect("super_admin_dashboard")
+
+    if request.user.approval_status != 'approved':
+        logout(request)
+        messages.error(
+            request,
+            "Your account is pending Super Admin approval.",
+        )
+        return redirect("login")
+
+    if request.user.is_admin():
         return redirect("admin_dashboard")
     
     if request.user.role == "technician":
@@ -1175,20 +1341,59 @@ def chart_expenses_by_crop(request):
 # =====================================================
 
 @login_required
+def super_admin_dashboard(request):
+    """Super Admin dashboard with full user oversight and approvals."""
+    if not request.user.is_super_admin():
+        messages.error(request, "Access denied. Super Admin only.")
+        return redirect("home")
+
+    admins = User.objects.filter(role='admin').order_by('-date_joined')
+    farmers = User.objects.filter(role='farmer').select_related('assigned_admin').order_by('-date_joined')
+    pending_users = User.objects.filter(approval_status='pending').exclude(
+        role='super_admin'
+    ).order_by('-date_joined')
+    technicians = User.objects.filter(role='technician').order_by('-date_joined')
+
+    context = {
+        'admins': admins,
+        'farmers': farmers,
+        'technicians': technicians,
+        'pending_users': pending_users,
+        'total_admins': admins.count(),
+        'total_farmers': farmers.count(),
+        'total_technicians': technicians.count(),
+        'pending_count': pending_users.count(),
+        'approved_count': User.objects.filter(approval_status='approved').exclude(role='super_admin').count(),
+        'rejected_count': User.objects.filter(approval_status='rejected').exclude(role='super_admin').count(),
+        'recent_registrations': User.objects.exclude(role='super_admin').order_by('-date_joined')[:10],
+    }
+    return render(request, 'myApp/super_admin_dashboard.html', context)
+
+
+@login_required
 def admin_dashboard(request):
     """Admin dashboard showing assigned farmers and system stats"""
     if not request.user.is_admin():
         messages.error(request, "Access denied. Admin only.")
         return redirect("farmer_dashboard")
+
+    if request.user.is_super_admin():
+        return redirect("super_admin_dashboard")
+
+    is_super_admin = request.user.is_super_admin()
+    if is_super_admin:
+        farmers = User.objects.filter(role='farmer').order_by('-date_joined')
+        pending_users = User.objects.filter(approval_status='pending').exclude(
+            role='super_admin'
+        ).order_by('-date_joined')
+    else:
+        # Admins only see farmers assigned to their account.
+        farmers = User.objects.filter(
+            role='farmer',
+            assigned_admin__id=request.user.id
+        ).exclude(assigned_admin__isnull=True).order_by('-date_joined')
+        pending_users = User.objects.none()
     
-    # Get only farmers assigned to this admin
-    # Explicitly filter by the current admin's ID to ensure no other admins' farmers show up
-    farmers = User.objects.filter(
-        role='farmer',
-        assigned_admin__id=request.user.id
-    ).exclude(assigned_admin__isnull=True).order_by('-date_joined')
-    
-    # Statistics for assigned farmers only
     total_farmers = farmers.count()
     total_technicians = User.objects.filter(role='technician').count()
     total_admins = User.objects.filter(role='admin').count()
@@ -1273,6 +1478,9 @@ def admin_dashboard(request):
         'total_farmers': total_farmers,
         'total_technicians': total_technicians,
         'total_admins': total_admins,
+        'is_super_admin': is_super_admin,
+        'pending_users': pending_users,
+        'pending_count': pending_users.count(),
         'total_activities': total_activities,
         'total_plantings': total_plantings,
         'total_crops': total_crops,
@@ -1298,8 +1506,17 @@ def admin_create_user(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            messages.success(request, f'User "{user.username}" created successfully!')
+            user = form.save(commit=False)
+            user.approval_status = 'pending'
+            user.is_active = True
+            user.save()
+            notify_super_admins_of_registration(user)
+            messages.success(
+                request,
+                f'User "{user.username}" created and sent for Super Admin approval.',
+            )
+            if request.user.is_super_admin():
+                return redirect('super_admin_dashboard')
             return redirect('admin_dashboard')
         else:
             messages.error(request, 'Please correct the errors below.')
@@ -1307,6 +1524,54 @@ def admin_create_user(request):
         form = CustomUserCreationForm()
     
     return render(request, 'myApp/admin_create_user.html', {'form': form})
+
+
+@login_required
+def approve_user_registration(request, user_id):
+    redirect_target = "super_admin_dashboard" if request.user.is_super_admin() else "admin_dashboard"
+    if not request.user.is_super_admin():
+        messages.error(request, "Access denied. Super Admin only.")
+        return redirect(redirect_target)
+
+    if request.method != "POST":
+        return redirect(redirect_target)
+
+    user = get_object_or_404(User, id=user_id)
+    if user.role == 'super_admin':
+        messages.error(request, "Super Admin accounts cannot be approved from this page.")
+        return redirect(redirect_target)
+
+    user.approval_status = 'approved'
+    user.approved_by = request.user
+    user.approved_at = timezone.now()
+    user.is_active = True
+    user.save(update_fields=['approval_status', 'approved_by', 'approved_at', 'is_active'])
+    messages.success(request, f'Approved account for "{user.username}".')
+    return redirect(redirect_target)
+
+
+@login_required
+def reject_user_registration(request, user_id):
+    redirect_target = "super_admin_dashboard" if request.user.is_super_admin() else "admin_dashboard"
+    if not request.user.is_super_admin():
+        messages.error(request, "Access denied. Super Admin only.")
+        return redirect(redirect_target)
+
+    if request.method != "POST":
+        return redirect(redirect_target)
+
+    user = get_object_or_404(User, id=user_id)
+    if user.role == 'super_admin':
+        messages.error(request, "Super Admin accounts cannot be rejected from this page.")
+        return redirect(redirect_target)
+
+    user.approval_status = 'rejected'
+    user.approved_by = request.user
+    user.approved_at = timezone.now()
+    user.is_active = False
+    user.save(update_fields=['approval_status', 'approved_by', 'approved_at', 'is_active'])
+    messages.success(request, f'Rejected account for "{user.username}".')
+    return redirect(redirect_target)
 
 
 # =====================================================

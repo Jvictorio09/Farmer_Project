@@ -100,7 +100,17 @@
                 
                 <!-- Desktop Navigation Links -->
                 <nav class="flex items-center space-x-4 text-sm font-medium" role="navigation" aria-label="Main navigation">
-                    {% if request.user.is_authenticated and request.user.role == 'admin' %}
+                    {% if request.user.is_authenticated and request.user.is_super_admin %}
+                        <a href="{% url 'super_admin_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/super-admin/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Super Admin Dashboard
+                        </a>
+                        <a href="{% url 'admin_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/admin/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Admin View
+                        </a>
+                        <a href="{% url 'admin_create_user' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/admin/create-user/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
+                            Create User
+                        </a>
+                    {% elif request.user.is_authenticated and request.user.is_admin %}
                         <a href="{% url 'admin_dashboard' %}" class="text-white hover:text-green-100 hover:underline cursor-pointer transition-colors whitespace-nowrap {% if request.path == '/admin/dashboard/' %}underline font-bold{% endif %}" style="pointer-events: auto;">
                             Admin Dashboard
                         </a>
@@ -267,7 +277,17 @@
         <!-- Mobile Menu Dropdown -->
         <nav id="mobile-menu" class="hidden md:hidden mt-4 pb-2 border-t border-green-600">
             <div class="flex flex-col space-y-1 pt-3">
-                {% if request.user.is_authenticated and request.user.role == 'admin' %}
+                {% if request.user.is_authenticated and request.user.is_super_admin %}
+                    <a href="{% url 'super_admin_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/super-admin/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Super Admin Dashboard
+                    </a>
+                    <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/admin/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Admin View
+                    </a>
+                    <a href="{% url 'admin_create_user' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/admin/create-user/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
+                        Create User
+                    </a>
+                {% elif request.user.is_authenticated and request.user.is_admin %}
                     <a href="{% url 'admin_dashboard' %}" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-600 cursor-pointer transition-colors {% if request.path == '/admin/dashboard/' %}bg-green-600 font-bold{% endif %}" onclick="closeMobileMenu()">
                         Admin Dashboard
                     </a>

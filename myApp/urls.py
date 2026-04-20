@@ -1,6 +1,5 @@
 from django.urls import path, reverse_lazy
 from django.contrib.auth.views import (
-    LoginView,
     PasswordResetView,
     PasswordResetDoneView,
     PasswordResetConfirmView,
@@ -11,7 +10,7 @@ from . import views
 urlpatterns = [
 
     # AUTH
-    path('login/', LoginView.as_view(template_name='auth/login.html'), name='login'),
+    path('login/', views.ApprovalLoginView.as_view(template_name='auth/login.html'), name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
     path('', views.role_redirect_view, name='home'),

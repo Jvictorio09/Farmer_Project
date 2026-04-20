@@ -11,8 +11,8 @@ from .models import (
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("username", "role", "region", "is_staff")
-    list_filter = ("role", "region")
+    list_display = ("username", "role", "approval_status", "region", "is_staff")
+    list_filter = ("role", "approval_status", "region")
 
 @admin.register(Crop)
 class CropAdmin(admin.ModelAdmin):

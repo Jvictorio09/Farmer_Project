@@ -25,12 +25,32 @@ EXPENSE_TYPES = [
 
 class User(AbstractUser):
     ROLE_CHOICES = [
+        ('super_admin', 'Super Admin'),
         ('admin', 'Admin'),
         ('farmer', 'Farmer'),
         ('technician', 'Technician'),
     ]
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='farmer')
     region = models.CharField(max_length=100, blank=True)
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='pending',
+    )
+    approved_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_users',
+        limit_choices_to={'role': 'super_admin'},
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
     assigned_admin = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
@@ -43,7 +63,9 @@ class User(AbstractUser):
 
     def is_farmer(self): return self.role == 'farmer'
     def is_technician(self): return self.role == 'technician'
-    def is_admin(self): return self.role == 'admin'
+    def is_super_admin(self): return self.role == 'super_admin' or self.is_superuser
+    def is_admin(self): return self.role in {'admin', 'super_admin'} or self.is_superuser
+    def is_approved_user(self): return self.approval_status == 'approved'
 
 
 # ======================

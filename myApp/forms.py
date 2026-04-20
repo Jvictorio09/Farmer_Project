@@ -14,6 +14,11 @@ from .models import (
 # ======================
 
 class CustomUserCreationForm(UserCreationForm):
+    captcha = forms.CharField(
+        required=False,
+        max_length=10,
+        help_text="Enter the result to verify you are human.",
+    )
     assigned_admin = forms.ModelChoiceField(
         queryset=User.objects.filter(role='admin').order_by('username'),
         required=False,
@@ -24,11 +29,41 @@ class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
         fields = ['username', 'email', 'role', 'region', 'assigned_admin']
+
+    def __init__(
+        self,
+        *args,
+        include_super_admin=False,
+        require_captcha=False,
+        captcha_prompt=None,
+        captcha_expected=None,
+        **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+        self.include_super_admin = include_super_admin
+        self.require_captcha = require_captcha
+        self.captcha_expected = str(captcha_expected) if captcha_expected is not None else None
+        allowed_roles = ['farmer', 'technician', 'admin']
+        if include_super_admin:
+            allowed_roles.append('super_admin')
+        self.fields['role'].choices = [
+            (key, label)
+            for key, label in User.ROLE_CHOICES
+            if key in allowed_roles
+        ]
+        if require_captcha:
+            self.fields['captcha'].required = True
+            self.fields['captcha'].label = captcha_prompt or "CAPTCHA"
+        else:
+            self.fields.pop('captcha')
     
     def clean(self):
         cleaned_data = super().clean()
         role = cleaned_data.get('role')
         assigned_admin = cleaned_data.get('assigned_admin')
+
+        if role == 'super_admin' and not self.include_super_admin:
+            raise forms.ValidationError("Super Admin role is not available in this form.")
         
         # Only require/admin assignment for farmers
         if role != 'farmer' and assigned_admin:
@@ -36,6 +71,19 @@ class CustomUserCreationForm(UserCreationForm):
             cleaned_data['assigned_admin'] = None
         
         return cleaned_data
+
+    def clean_captcha(self):
+        captcha = self.cleaned_data.get('captcha')
+        if not self.require_captcha:
+            return captcha
+
+        if self.captcha_expected is None:
+            raise forms.ValidationError("CAPTCHA expired. Please try again.")
+
+        if str(captcha).strip() != self.captcha_expected:
+            raise forms.ValidationError("Incorrect CAPTCHA answer.")
+
+        return captcha
 
 
 # ======================

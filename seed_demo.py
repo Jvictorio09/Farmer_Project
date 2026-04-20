@@ -35,6 +35,7 @@ from seed_crops import DATA as CROP_DATA, upsert_crop
 def _create_users():
     """Create demo admin, technician, and farmers."""
     users = [
+        dict(username="superadmin", email="superadmin@Agriplus.demo", role="super_admin"),
         dict(username="admin", email="admin@Agriplus.demo", role="admin"),
         dict(username="tech_ana", email="tech@Agriplus.demo", role="technician", first_name="Ana"),
         dict(username="farmer_ben", email="ben@Agriplus.demo", role="farmer", first_name="Ben", region="Ilocos Norte"),
@@ -54,14 +55,20 @@ def _create_users():
                 "first_name": entry.get("first_name", ""),
                 "region": entry.get("region", ""),
                 "is_active": True,  # Ensure user is active
-                "is_staff": entry["role"] == "admin",  # Admins get staff access
+                "is_staff": entry["role"] in {"admin", "super_admin"},
+                "is_superuser": entry["role"] == "super_admin",
+                "approval_status": "approved",
+                "approved_at": timezone.now(),
             },
         )
         # Always set password to ensure it's correct, even for existing users
         user.set_password(entry.get("password", "demo12345"))
         # Ensure user is active
         user.is_active = True
-        user.is_staff = entry["role"] == "admin"
+        user.is_staff = entry["role"] in {"admin", "super_admin"}
+        user.is_superuser = entry["role"] == "super_admin"
+        user.approval_status = "approved"
+        user.approved_at = timezone.now()
         user.save()  # Save all fields
         
         # Store admin user for later assignment

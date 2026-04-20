@@ -7,13 +7,38 @@
 <div class="min-h-screen flex items-center justify-center bg-green-50 px-4 py-8">
   <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg">
     <div class="text-center mb-6">
-      <h2 class="text-3xl font-extrabold text-green-700">Create Your Farmer Account 🧑‍🌾</h2>
-      <p class="text-gray-600 text-sm mt-1">Join Agriplus and grow with confidence.</p>
+      <h2 class="text-3xl font-extrabold text-green-700">Create Your Agrilog+ Account</h2>
+      <p class="text-gray-600 text-sm mt-1">All registrations require Super Admin approval before login.</p>
     </div>
     <form method="POST" class="space-y-5">
       {% csrf_token %}
+      <input type="hidden" name="captcha_token" value="{{ captcha_token }}">
       {{ form.non_field_errors }}
       {% for field in form %}
+        {% if field.name == "captcha" %}
+        <div id="register-captcha-wrapper">
+          <div class="rounded-md border border-gray-300 bg-gray-50 p-3">
+            <div class="flex items-center justify-between">
+              <label for="captcha-ui-check" class="flex items-center gap-3 cursor-pointer">
+                <input id="captcha-ui-check" type="checkbox" class="h-5 w-5 rounded border-gray-400 text-green-600 focus:ring-green-500">
+                <span class="text-sm text-gray-800">I'm not a robot</span>
+              </label>
+              <div class="text-right leading-tight">
+                <div class="text-[11px] font-semibold text-gray-600">CAPTCHA</div>
+                <div class="text-[10px] text-gray-500"></div>
+              </div>
+            </div>
+          </div>
+          <div id="captcha-challenge" class="mt-3 hidden">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+            {{ field|add_class:"w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" }}
+            <p class="text-xs text-gray-500 mt-1">Type the answer to complete verification.</p>
+            {% if field.errors %}
+              <p class="text-sm text-red-600 mt-1">{{ field.errors|striptags }}</p>
+            {% endif %}
+          </div>
+        </div>
+        {% else %}
         <div
           {% if field.name == "role" %}id="register-role-wrapper"{% endif %}
           {% if field.name == "assigned_admin" %}id="register-assigned-admin-wrapper"{% endif %}
@@ -24,6 +49,7 @@
             <p class="text-sm text-red-600 mt-1">{{ field.errors|striptags }}</p>
           {% endif %}
         </div>
+        {% endif %}
       {% endfor %}
       <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-md transition">Register</button>
     </form>
@@ -38,21 +64,50 @@
   document.addEventListener('DOMContentLoaded', function () {
     const roleSelect = document.getElementById('id_role');
     const assignedWrapper = document.getElementById('register-assigned-admin-wrapper');
+    const captchaCheck = document.getElementById('captcha-ui-check');
+    const captchaChallenge = document.getElementById('captcha-challenge');
+    const captchaInput = document.getElementById('id_captcha');
 
-    if (!roleSelect || !assignedWrapper) return;
-
-    function syncAssignedVisibility() {
-      if (roleSelect.value === 'farmer') {
-        assignedWrapper.classList.remove('hidden');
-      } else {
-        assignedWrapper.classList.add('hidden');
-        const adminSelect = document.getElementById('id_assigned_admin');
-        if (adminSelect) adminSelect.value = '';
+    function syncCaptchaVisibility() {
+      if (!captchaChallenge || !captchaCheck) return;
+      const hasValue = captchaInput && captchaInput.value.trim() !== '';
+      const hasServerError = captchaChallenge.querySelector('.text-red-600');
+      const shouldShow = captchaCheck.checked || hasValue || Boolean(hasServerError);
+      captchaChallenge.classList.toggle('hidden', !shouldShow);
+      if (shouldShow) {
+        captchaCheck.checked = true;
       }
     }
 
-    syncAssignedVisibility();
-    roleSelect.addEventListener('change', syncAssignedVisibility);
+    if (captchaCheck) {
+      captchaCheck.addEventListener('change', function () {
+        syncCaptchaVisibility();
+        if (captchaCheck.checked && captchaInput) {
+          captchaInput.focus();
+        }
+      });
+    }
+
+    if (captchaInput) {
+      captchaInput.addEventListener('input', syncCaptchaVisibility);
+    }
+
+    if (roleSelect && assignedWrapper) {
+      function syncAssignedVisibility() {
+        if (roleSelect.value === 'farmer') {
+          assignedWrapper.classList.remove('hidden');
+        } else {
+          assignedWrapper.classList.add('hidden');
+          const adminSelect = document.getElementById('id_assigned_admin');
+          if (adminSelect) adminSelect.value = '';
+        }
+      }
+
+      syncAssignedVisibility();
+      roleSelect.addEventListener('change', syncAssignedVisibility);
+    }
+
+    syncCaptchaVisibility();
   });
 </script>
 {% endblock %}
